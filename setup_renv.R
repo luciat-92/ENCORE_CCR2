@@ -13,6 +13,7 @@ renv::install("devtools")
 renv::install("tidyverse")
 renv::install("pak")
 
+### IMPORTANT: if not working properly, specify in installation: repos = "https://cran.mirror.garr.it/CRAN/"
 # add github credential PAT (only needed if repo is not public)
 library(devtools)
 library(pak)
