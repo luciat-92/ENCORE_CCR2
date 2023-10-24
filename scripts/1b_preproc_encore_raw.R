@@ -6,7 +6,7 @@ setwd("/group/iorio/lucia/")
 # data have been batch corrected and all libraries are combined
 fold_data <- "datasets/ENCORE_SAMPLES_COPYNUMBER/DATA_FREEZE_v4/"
 file_CMP_ann <- "datasets/CMP_PORTAL/model_annotation/model_list_20230923.csv"
-fold_out <- "datasets/ENCORE_SAMPLES_COPYNUMBER/DATA_FREEZE_v4/BATCH_CORRECTED/ANALYSIS/"
+fold_out <- "datasets/ENCORE_SAMPLES_COPYNUMBER/DATA_FREEZE_v4/BATCH_CORRECTED/"
 libs_name <- c("COLO", "BRCA")
 
 input <- list()
@@ -44,7 +44,8 @@ CMP_table <- read_csv(file_CMP_ann) %>%
 
 model_dual_table <- left_join(samples_name, CMP_table, by = "model_name") %>%
   mutate(model_name_uppercase = str_replace_all(model_name, "[-]", "")) %>%
-  mutate(model_name_uppercase = toupper(model_name_uppercase))
+  mutate(model_name_uppercase = toupper(model_name_uppercase)) %>%
+  rename(model_name_CMP = model_name)
 
 # save
 write_tsv(x = model_dual_table,
@@ -69,14 +70,14 @@ model_single_table <- read_tsv(sprintf("%smodel_list.tsv", input_single_fold),
   dplyr::select(model_name_CMP_library, model_name_CMP, library, model_id_CMP)
 
 model_dual_table <- model_dual_table %>%
-  dplyr::mutate(model_name_CMP_lib = paste(model_name, lib, sep = "_")) %>%
+  dplyr::mutate(model_name_CMP_lib = paste(model_name_CMP, lib, sep = "_")) %>%
   dplyr::distinct(model_name_CMP_lib, .keep_all = TRUE) %>%
-  dplyr::select(model_name_CMP_lib, model_name, lib, model_id_CMP)
+  dplyr::select(model_name_CMP_lib, model_name_CMP, lib, model_id_CMP)
 
 # create summary CL
 CL_match_summary <- model_dual_table %>%
-  dplyr::distinct(model_name, .keep_all = TRUE) %>%
-  dplyr::mutate(single_screen = model_name %in% model_single_table$model_name_CMP) %>%
+  dplyr::distinct(model_name_CMP, .keep_all = TRUE) %>%
+  dplyr::mutate(single_screen = model_name_CMP %in% model_single_table$model_name_CMP) %>%
   dplyr::select(-model_name_CMP_lib, -lib)
 
 write_tsv("datasets/ENCORE_SAMPLES_COPYNUMBER/DATA_FREEZE_v4/BATCH_CORRECTED/models_match_single_screen.tsv", 
