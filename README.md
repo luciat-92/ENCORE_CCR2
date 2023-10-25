@@ -25,3 +25,11 @@ Application of [CRISPRcleanR^2](https://github.com/luciat-92/CRISPRcleanRatSquar
 ```
 sbatch --array=1-32%11 scripts/2_ccr2_run.sh
 ```
+
+#### STEP 3:
+Summarize output across all cell lines and generate relevant plots.
+```
+scripts/3_summarise.R
+```
+
+

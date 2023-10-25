@@ -5,6 +5,7 @@ library(S4Vectors)
 library(tidyverse)
 library(ggpubr)
 library(pheatmap)
+library(reshape2)
 
 source("R/3_auxilary_functions.R")
 root_path <- "/group/iorio/lucia/"
@@ -44,6 +45,34 @@ data("ADaM2021_essential")
 essential_genes <- ADaM2021_essential
 
 ##### plot model performances #####
+# plot min thr and max thr
+thr_correction <- output$thr_correction
+plot(thr_correction$min_thr, thr_correction$min_correction, pch = 20)
+abline(a = 0, b = 1)
+plot(thr_correction$max_thr, thr_correction$max_correction, pch = 20)
+abline(a = 0, b = 1)
+
+# plot model est p-values:
+df_model_est <- output$model_est %>%
+  dplyr::filter(type == "DOUBLE_CUT_PAIR") %>%
+  dplyr::mutate(log10P = -log10(get("Pr(>|t|)"))) %>%
+  dplyr::mutate(log10P = case_when(
+    log10P == Inf ~ -log10(.Machine$double.xmin),
+    TRUE ~ log10P))
+rownames(df_model_est) <- NULL
+pl <- ggplot(df_model_est, aes(x = CL_lib, fill = position, y = log10P)) +
+  geom_bar(stat = "identity", width = 0.5, position = position_dodge()) +
+  facet_wrap(.~feature, scales = "free_y", ncol = 1) +
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom") +
+  xlab("") +
+  ylab("-log10(p-value)")
+pl
+ggsave(pl, filename = sprintf("%s/ALL_CLs/model_estimates_pvalue.png",  fold), width = 7, height = 5)
+
+
 # split per CL
 plot_model_perf(model_perf = output$model_perf,
                 saveToFig = TRUE, 
@@ -466,4 +495,6 @@ pl
 ggsave(pl,  
        filename = sprintf("%s/ALL_CLs/ALL_CLs_nUniqueGenePairs_VS_meanCorrection.png", fold), width = 5, height = 4)
 
-
+#### correction across libraries ####
+dual_FC_COLO <- output$dual_FC %>%
+  filter(lib == "COLO")

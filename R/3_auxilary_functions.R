@@ -270,6 +270,7 @@ load_output <- function(fold, CL_name, lib_name, copy_number_file) {
                        fold, CL_name, lib_name, CL_name)
   if (file.exists(file_name)) {
     ccr2_output <- get(load(file_name))
+    
     CNA <- get_CNA(copy_number_file = copy_number_file, 
                    CL_name = CL_name)
     
@@ -320,7 +321,7 @@ get_all_CLs <- function(model_encore_table, fold, copy_number_file) {
   
   dual_FC <- dual_FC_withCNA <- single_FC_withCNA <- 
     selection_letANDsyn <-  selection_gene_letANDsyn <- 
-    model_perf <- thr_correction <- list()
+    model_perf <- model_est <- thr_correction <- list()
   
   for (idx in seq_len(nrow(model_encore_table))) {
     
@@ -359,6 +360,12 @@ get_all_CLs <- function(model_encore_table, fold, copy_number_file) {
           CL_lib = paste(CL_name, lib_name, sep = "_"))
       
       model_perf[[idx]] <- out$model_perf %>% 
+        mutate(
+          CL = CL_name, 
+          lib = lib_name,
+          CL_lib = paste(CL_name, lib_name, sep = "_"))
+      
+      model_est[[idx]] <- out$model_est %>% 
         mutate(
           CL = CL_name, 
           lib = lib_name,
@@ -409,11 +416,13 @@ get_all_CLs <- function(model_encore_table, fold, copy_number_file) {
   selection_letANDsyn <- dplyr::bind_rows(selection_letANDsyn)
   selection_gene_letANDsyn <- dplyr::bind_rows(selection_gene_letANDsyn)
   model_perf <- dplyr::bind_rows(model_perf)
+  model_est <- dplyr::bind_rows(model_est)
   thr_correction <- dplyr::bind_rows(thr_correction)
   
   return(list(dual_FC = dual_FC, 
               dual_FC_withCNA = dual_FC_withCNA, 
               model_perf = model_perf,
+              model_est = model_est,
               single_FC_withCNA = single_FC_withCNA, 
               selection_letANDsyn = selection_letANDsyn, 
               selection_gene_letANDsyn = selection_gene_letANDsyn, 
