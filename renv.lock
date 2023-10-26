@@ -727,6 +727,35 @@
       "Hash": "00fb5dbafc94b13ff52e5af4a32a5f5a",
       "Requirements": []
     },
+    "R.methodsS3": {
+      "Package": "R.methodsS3",
+      "Version": "1.8.1",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "4bf6453323755202d5909697b6f7c109",
+      "Requirements": []
+    },
+    "R.oo": {
+      "Package": "R.oo",
+      "Version": "1.24.0",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "5709328352717e2f0a9c012be8a97554",
+      "Requirements": [
+        "R.methodsS3"
+      ]
+    },
+    "R.utils": {
+      "Package": "R.utils",
+      "Version": "2.11.0",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "a7ecb8e60815c7a18648e84cd121b23a",
+      "Requirements": [
+        "R.methodsS3",
+        "R.oo"
+      ]
+    },
     "R6": {
       "Package": "R6",
       "Version": "2.5.1",

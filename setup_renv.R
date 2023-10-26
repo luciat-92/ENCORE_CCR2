@@ -16,6 +16,7 @@ renv::install("tidyverse")
 renv::install("pak")
 renv::install("argparse")
 renv::install("pheatmap")
+renv::install("R.utils")
 
 ### IMPORTANT: if not working properly, specify in installation: repos = "https://cran.mirror.garr.it/CRAN/"
 # add github credential PAT (only needed if repo is not public)

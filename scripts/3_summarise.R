@@ -6,6 +6,7 @@ library(tidyverse)
 library(ggpubr)
 library(pheatmap)
 library(reshape2)
+library(R.utils)
 
 source("R/3_auxilary_functions.R")
 root_path <- "/group/iorio/lucia/"
@@ -27,6 +28,14 @@ output <- get_all_CLs(
   copy_number_file = copy_number_file)
 # save
 save(output, file = sprintf("%s/ALL_CLs/complete_output.RData",  fold))
+write.table(
+  output$dual_FC, 
+  file = sprintf("%s/ALL_CLs/logFC_sgRNA_ComBatCorrectionLIBs_CCR2correction.txt",  fold), 
+  quote = F, 
+  sep = "\t", 
+  row.names = F, 
+  col.names = T)
+gzip(sprintf("%s/ALL_CLs/logFC_sgRNA_ComBatCorrectionLIBs_CCR2correction.txt",  fold)) # compress
 
 # load genome-wide single
 single_gw <- get_all_CLs_singleGW(
