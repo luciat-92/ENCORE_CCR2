@@ -29,7 +29,7 @@ for (id_row in seq_len(nrow(CL_pub_summary))) {
     library = str_trim(str_split_fixed(tmp[,4], pattern = "[,]", n = Inf)))
 }
 CL_pub_summary <- bind_rows(df) %>%
-  filter(passed_high_QC, passed_low_QC)
+  filter(passed_high_QC & (passed_low_QC | is.na(passed_low_QC)))
 
 # get raw counts
 # NOTE: there are complete replicates (H716), not in the list, why? 
