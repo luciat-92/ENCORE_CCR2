@@ -35,7 +35,8 @@ write.table(
   sep = "\t", 
   row.names = F, 
   col.names = T)
-gzip(sprintf("%s/ALL_CLs/logFC_sgRNA_ComBatCorrectionLIBs_CCR2correction.txt",  fold)) # compress
+gzip(sprintf("%s/ALL_CLs/logFC_sgRNA_ComBatCorrectionLIBs_CCR2correction.txt",  fold), 
+     overwrite = TRUE) # compress
 
 # load genome-wide single
 single_gw <- get_all_CLs_singleGW(
