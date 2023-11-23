@@ -11,8 +11,6 @@ library(R.utils)
 source("R/3_auxilary_functions.R")
 root_path <- "/group/iorio/lucia/"
 
-
-
 ##################################
 fold <- sprintf("%sCRISPR_combinatorial/CRISPRcleanRatSquared/DATA_FREEZE_v4/", root_path)
 copy_number_file <- sprintf("%sdatasets/ENCORE_SAMPLES_COPYNUMBER/DATA_FREEZE_v4/METADATA_FEB2023/COPY_NUMBER/NEW_COPY_NUMBER/MERGED_SEGMENT_COPYNUMBER.txt", root_path)
