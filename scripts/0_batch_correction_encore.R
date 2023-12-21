@@ -7,7 +7,6 @@ library(pROC)
 library(CRISPRcleanR)
 library(effectsize)
 
-# setwd("~/workspace/ENCORE_CCR2/")
 source("R/0_batchcorr_auxilary_functions.R")
 
 #### 
@@ -74,14 +73,15 @@ for (idx in 1:length(res_cneg)) {
     list_matrix = data_BRCA)
   
   # save output
-  write.table(file = sprintf("%sORIGINAL/COLO_%s_FINAL_EXACT_logFC_sgRNA.txt", fold_out, cneg_label[idx]), 
+  system(paste0("mkdir -p ", fold_out, "/ORIGINAL/", cneg_label[idx]))
+  write.table(file = sprintf("%sORIGINAL/%s/COLO_FINAL_EXACT_logFC_sgRNA.txt", fold_out, cneg_label[idx]), 
               x = df_COLO, 
               quote = F, 
               col.names = T, 
               row.names = F, 
               sep = "\t")
   
-  write.table(file = sprintf("%sORIGINAL/BRCA_%s_FINAL_EXACT_logFC_sgRNA.txt", fold_out, cneg_label[idx]), 
+  write.table(file = sprintf("%sORIGINAL/%s/BRCA_FINAL_EXACT_logFC_sgRNA.txt", fold_out, cneg_label[idx]), 
               x = df_BRCA, 
               quote = F, 
               col.names = T, 
@@ -124,13 +124,14 @@ for (idx in 1:length(res_cneg)) {
     data = res_cneg[[idx]]$data, 
     file_cmp = sprintf("%smodel_annotation/model_list_20230801.csv", fold_cmp))
   
+  system(paste0("mkdir -p ", fold_out, "/BATCH_CORRECTED/", cneg_label[idx]))
   # plots
   if (plots_batch_correction) {
   
     common_COLO <- pca_commonpairs_function(
       list_df = res_cneg[[idx]]$data[id_colo], 
       CL_ann = model_encore_table,
-      outfold = sprintf("%sBATCH_CORRECTED/COLO_%s_", fold_out, cneg_label[idx]), 
+      outfold = sprintf("%sBATCH_CORRECTED/%s/COLO_", fold_out, cneg_label[idx]), 
       save_plot = TRUE, 
       show_plot = TRUE, 
       save_ext = "pdf"
@@ -139,7 +140,7 @@ for (idx in 1:length(res_cneg)) {
     common_BRCA <- pca_commonpairs_function(
       list_df = res_cneg[[idx]]$data[id_brca], 
       CL_ann = model_encore_table,
-      outfold = sprintf("%sBATCH_CORRECTED/BRCA_%s_", fold_out, cneg_label[idx]), 
+      outfold = sprintf("%sBATCH_CORRECTED/%s/BRCA_", fold_out, cneg_label[idx]), 
       save_plot = TRUE, 
       show_plot = TRUE, 
       save_ext = "pdf"
@@ -148,7 +149,7 @@ for (idx in 1:length(res_cneg)) {
     plot_dist_commonpairs(
       list_df = res_cneg[[idx]]$data[id_colo], 
       CL_ann = model_encore_table,
-      outfold = sprintf("%sBATCH_CORRECTED/COLO_%s_", fold_out, cneg_label[idx]), 
+      outfold = sprintf("%sBATCH_CORRECTED/%s/COLO_", fold_out, cneg_label[idx]), 
       save_plot = TRUE, 
       save_ext = "pdf"
     )
@@ -156,7 +157,7 @@ for (idx in 1:length(res_cneg)) {
     plot_dist_commonpairs(
       list_df = res_cneg[[idx]]$data[id_brca], 
       CL_ann = model_encore_table,
-      outfold = sprintf("%sBATCH_CORRECTED/BRCA_%s_", fold_out, cneg_label[idx]), 
+      outfold = sprintf("%sBATCH_CORRECTED/%s/BRCA_", fold_out, cneg_label[idx]), 
       save_plot = TRUE, 
       save_ext = "pdf"
     )
@@ -164,7 +165,7 @@ for (idx in 1:length(res_cneg)) {
     plot_dist_PPV(
       list_df = res_cneg[[idx]]$data[id_colo],
       CL_ann = model_encore_table,
-      outfold = sprintf("%sBATCH_CORRECTED/COLO_%s_", fold_out, cneg_label[idx]), 
+      outfold = sprintf("%sBATCH_CORRECTED/%s/COLO_", fold_out, cneg_label[idx]), 
       save_plot = TRUE, 
       save_ext = "pdf"
     )
@@ -172,7 +173,7 @@ for (idx in 1:length(res_cneg)) {
     plot_dist_PPV(
       list_df = res_cneg[[idx]]$data[id_brca], 
       CL_ann = model_encore_table,
-      outfold = sprintf("%sBATCH_CORRECTED/BRCA_%s_", fold_out, cneg_label[idx]), 
+      outfold = sprintf("%sBATCH_CORRECTED/%s/BRCA_", fold_out, cneg_label[idx]), 
       save_plot = TRUE, 
       save_ext = "pdf"
     )
@@ -183,7 +184,7 @@ for (idx in 1:length(res_cneg)) {
   validation_COLO <- validate_NN_approximation(
     list_df = res_cneg[[idx]]$data[id_colo], 
     CL_ann = model_encore_table,
-    outfold = sprintf("%sBATCH_CORRECTED/COLO_%s_", fold_out, cneg_label[idx]), 
+    outfold = sprintf("%sBATCH_CORRECTED/%s/COLO_", fold_out, cneg_label[idx]), 
     save_plot = TRUE, 
     save_ext = "pdf"
   )
@@ -191,7 +192,7 @@ for (idx in 1:length(res_cneg)) {
   validation_BRCA <- validate_NN_approximation(
     list_df = res_cneg[[idx]]$data[id_brca], 
     CL_ann = model_encore_table,
-    outfold = sprintf("%sBATCH_CORRECTED/BRCA_%s_", fold_out, cneg_label[idx]), 
+    outfold = sprintf("%sBATCH_CORRECTED/%s/BRCA_", fold_out, cneg_label[idx]), 
     save_plot = TRUE, 
     save_ext = "pdf"
   )
@@ -215,7 +216,7 @@ for (idx in 1:length(res_cneg)) {
     list_df = res_cneg[[idx]]$data[id_colo], 
     CL_ann = model_encore_table,
     kNN = best_kNN_COLO, 
-    outfold = sprintf("%sBATCH_CORRECTED/COLO_%s_", fold_out, cneg_label[idx]), 
+    outfold = sprintf("%sBATCH_CORRECTED/%s/COLO_", fold_out, cneg_label[idx]), 
     save_plot = TRUE, 
     show_plot = TRUE, 
     save_ext = "pdf") 
@@ -225,7 +226,7 @@ for (idx in 1:length(res_cneg)) {
     list_df = res_cneg[[idx]]$data[id_brca], 
     CL_ann = model_encore_table,
     kNN = best_kNN_BRCA, 
-    outfold = sprintf("%sBATCH_CORRECTED/BRCA_%s_", fold_out, cneg_label[idx]), 
+    outfold = sprintf("%sBATCH_CORRECTED/%s/BRCA_", fold_out, cneg_label[idx]), 
     save_plot = TRUE, 
     show_plot = TRUE, 
     save_ext = "pdf") 
@@ -235,7 +236,7 @@ for (idx in 1:length(res_cneg)) {
                                       adjusted = data_COLO$adj, 
                                       list_df = res_cneg[[idx]]$data[id_colo],
                                       common_pairs = data_COLO$combat$common_pairs, 
-                                      outfold = sprintf("%sBATCH_CORRECTED/COLO_%s_", fold_out, cneg_label[idx]), 
+                                      outfold = sprintf("%sBATCH_CORRECTED/%s/COLO_", fold_out, cneg_label[idx]), 
                                       save_plot = TRUE, 
                                       show_plot = TRUE, 
                                       save_ext = "png") 
@@ -244,7 +245,7 @@ for (idx in 1:length(res_cneg)) {
                                       adjusted = data_BRCA$adj, 
                                       list_df = res_cneg[[idx]]$data[id_brca],
                                       common_pairs = data_BRCA$combat$common_pairs, 
-                                      outfold = sprintf("%sBATCH_CORRECTED/BRCA_%s_", fold_out, cneg_label[idx]), 
+                                      outfold = sprintf("%sBATCH_CORRECTED/%s/BRCA_", fold_out, cneg_label[idx]), 
                                       save_plot = TRUE, 
                                       show_plot = TRUE,
                                       save_ext = "png")
@@ -267,14 +268,14 @@ for (idx in 1:length(res_cneg)) {
     list_matrix = data_BRCA$original)
 
   # save output
-  write.table(file = sprintf("%sBATCH_CORRECTED/COLO_%s_FINAL_EXACT_logFC_sgRNA.txt", fold_out, cneg_label[idx]), 
+  write.table(file = sprintf("%sBATCH_CORRECTED/%s/COLO_FINAL_EXACT_logFC_sgRNA.txt", fold_out, cneg_label[idx]), 
               x = df_adj_COLO, 
               quote = F, 
               col.names = T, 
               row.names = F, 
               sep = "\t")
   
-  write.table(file = sprintf("%sBATCH_CORRECTED/BRCA_%s_FINAL_EXACT_logFC_sgRNA.txt", fold_out, cneg_label[idx]), 
+  write.table(file = sprintf("%sBATCH_CORRECTED/%s/BRCA_FINAL_EXACT_logFC_sgRNA.txt", fold_out, cneg_label[idx]), 
               x = df_adj_BRCA, 
               quote = F, 
               col.names = T, 
@@ -303,33 +304,33 @@ for (idx in 1:length(res_cneg)) {
   # save parameters for each guide pair
   param <- data_COLO$param_all
   save(param, 
-       file = sprintf("%sBATCH_CORRECTED/COLO_%s_FINAL_EXACT_logFC_sgRNA_ComBatParam.RData", fold_out, cneg_label[idx]))
+       file = sprintf("%sBATCH_CORRECTED/%s/COLO_FINAL_EXACT_logFC_sgRNA_ComBatParam.RData", fold_out, cneg_label[idx]))
   
   param <- data_BRCA$param_all
   save(param, 
-       file = sprintf("%sBATCH_CORRECTED/BRCA_%s_FINAL_EXACT_logFC_sgRNA_ComBatParam.RData", fold_out, cneg_label[idx]))
+       file = sprintf("%sBATCH_CORRECTED/%s/BRCA_FINAL_EXACT_logFC_sgRNA_ComBatParam.RData", fold_out, cneg_label[idx]))
   
   
   ## external validation: check CL specific distributions before and after correction ###
   ktest_COLO <- test_distributions_per_class(data_adj = df_adj_COLO, 
                                              data_or = df_or_COLO, 
-                                             outfold = sprintf("%sBATCH_CORRECTED/COLO_%s_", fold_out, cneg_label[idx]), 
+                                             outfold = sprintf("%sBATCH_CORRECTED/%s/COLO_", fold_out, cneg_label[idx]), 
                                              save_plot = TRUE, 
                                              show_plot = TRUE, 
                                              save_ext = "pdf")
   ktest_COLO_all <- test_distributions_per_class_allCLs(COLO_allCLs, 
-                                      outfold = sprintf("%sBATCH_CORRECTED/COLO_%s_", fold_out, cneg_label[idx]), 
+                                      outfold = sprintf("%sBATCH_CORRECTED/%s/COLO_", fold_out, cneg_label[idx]), 
                                       save_plot = TRUE, 
                                       save_ext = "pdf")
   
   ktest_BRCA <- test_distributions_per_class(data_adj = df_adj_BRCA, 
                                              data_or = df_or_BRCA, 
-                                             outfold = sprintf("%sBATCH_CORRECTED/BRCA_%s_", fold_out, cneg_label[idx]), 
+                                             outfold = sprintf("%sBATCH_CORRECTED/%s/BRCA_", fold_out, cneg_label[idx]), 
                                              save_plot = TRUE, 
                                              show_plot = TRUE, 
                                              save_ext = "pdf")
   ktest_BRCA_all <- test_distributions_per_class_allCLs(BRCA_allCLs, 
-                                                        outfold = sprintf("%sBATCH_CORRECTED/BRCA_%s_", fold_out, cneg_label[idx]), 
+                                                        outfold = sprintf("%sBATCH_CORRECTED/%s/BRCA_", fold_out, cneg_label[idx]), 
                                                         save_plot = TRUE, 
                                                         save_ext = "pdf")
   
@@ -337,7 +338,7 @@ for (idx in 1:length(res_cneg)) {
   COLO_lib_genes <- plot_library_genes(data_adj = df_adj_COLO, 
                                        data_or = df_or_COLO, 
                                        essential_genes = ADaM2021_essential,  
-                                       outfold = sprintf("%sBATCH_CORRECTED/COLO_%s_", fold_out, cneg_label[idx]), 
+                                       outfold = sprintf("%sBATCH_CORRECTED/%s/COLO_", fold_out, cneg_label[idx]), 
                                        save_plot = TRUE, 
                                        show_plot = TRUE, 
                                        save_ext = "pdf")
@@ -345,7 +346,7 @@ for (idx in 1:length(res_cneg)) {
   BRCA_lib_genes <- plot_library_genes(data_adj = df_adj_BRCA, 
                                        data_or = df_or_BRCA, 
                                        essential_genes = ADaM2021_essential,  
-                                       outfold = sprintf("%sBATCH_CORRECTED/BRCA_%s_", fold_out, cneg_label[idx]), 
+                                       outfold = sprintf("%sBATCH_CORRECTED/%s/BRCA_", fold_out, cneg_label[idx]), 
                                        save_plot = TRUE, 
                                        show_plot = TRUE, 
                                        save_ext = "pdf")
