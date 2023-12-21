@@ -465,6 +465,7 @@ combat_correction <- function(list_df,
                               CL_ann,
                               save_plot = FALSE,
                               show_plot = TRUE, 
+                              save_ext = "png",
                               outfold = NULL){
   
   list_df_h <- harmonize_per_CL(list_df, CL_ann)
@@ -534,13 +535,13 @@ combat_correction <- function(list_df,
   }
   
   if (save_plot) {
-    ggsave(filename = sprintf("%sComBat_param_dist_libraries.png", outfold), 
+    ggsave(filename = sprintf("%sComBat_param_dist_libraries.%s", outfold, save_ext), 
            units = "in", 
            plot = pl_lib, 
            width = 4, 
            height = 4)
     
-    ggsave(filename = sprintf("%sComBat_param_dist_GPclass.png", outfold), 
+    ggsave(filename = sprintf("%sComBat_param_dist_GPclass.%s", outfold, save_ext), 
            units = "in", 
            plot = pl_class, 
            width = 6, 
@@ -814,5 +815,842 @@ plot_dist_commonpairs <- function(list_df,
               lib = libs_dist))
   
 }
+
+# can we estimate gamma and delta from the closest elements?
+# validation based on cohen's d inside and outside kNN
+get_stat_closest <- function(id_lib, 
+                             matrix_data, 
+                             combat_param, 
+                             kNN){
+  
+  # explain why euclidean distance makes sense
+  dist_guides <- as.matrix(dist(t(matrix_data[[id_lib]])))
+  # for each guide, find closest guides
+  closest_guides <- apply(dist_guides, 1, function(x) order(x)[1:(kNN + 1)], simplify = FALSE)
+  closest_guides_dist <- apply(dist_guides, 1, function(x) sort(x)[1:(kNN + 1)], simplify = FALSE)
+  
+  gamma_closest <- lapply(closest_guides, 
+                          function(x) combat_param$gamma.star[id_lib,x])
+  gamma_compl <- lapply(closest_guides, 
+                        function(x) combat_param$gamma.star[id_lib,-x])
+  delta_closest <- lapply(closest_guides, 
+                          function(x) combat_param$delta.star[id_lib,x])
+  delta_compl <- lapply(closest_guides, 
+                        function(x) combat_param$delta.star[id_lib,-x])
+  
+  ###
+  n_pairs <- ncol(matrix_data[[id_lib]])
+  cohensd_gamma <- sapply(1:n_pairs, function(x) 
+    tryCatch(cohens_d(
+      x = abs(combat_param$gamma.star[id_lib,x] - gamma_closest[[x]]), 
+      y = abs(combat_param$gamma.star[id_lib,x] - gamma_compl[[x]]), 
+      pooled_sd = FALSE)$Cohens_d, 
+      error = function(e){NA}))
+  
+  ttest_gamma <- sapply(1:n_pairs, function(x) 
+    tryCatch(t.test(
+      x = abs(combat_param$gamma.star[id_lib,x] - gamma_closest[[x]]),
+      y = abs(combat_param$gamma.star[id_lib,x] - gamma_compl[[x]]), 
+      alternative = "less")$p.value, 
+      error = function(e){NA}))
+  
+  cohensd_delta <- sapply(1:n_pairs, function(x) 
+    tryCatch(cohens_d(
+      x = abs(combat_param$delta.star[id_lib,x] - delta_closest[[x]]), 
+      y = abs(combat_param$delta.star[id_lib,x] - delta_compl[[x]]), 
+      pooled_sd = FALSE)$Cohens_d, 
+      error = function(e){NA}))
+  
+  ttest_delta <- sapply(1:n_pairs, function(x) 
+    tryCatch(t.test(
+      x = abs(combat_param$delta.star[id_lib,x] - delta_closest[[x]]), 
+      y = abs(combat_param$delta.star[id_lib,x] - delta_compl[[x]]), 
+      alternative = "less")$p.value,
+      error = function(e){NA}))
+  
+  df_out <- data.frame(SEQ_pair = rep(colnames(matrix_data[[id_lib]]), 2), 
+                       cohens_d = c(cohensd_gamma, cohensd_delta), 
+                       ttest_pval = c(ttest_gamma, ttest_delta), 
+                       type = c(rep("gamma", n_pairs), rep("delta", n_pairs)), 
+                       id_lib = id_lib)
+  
+  df_out$kNN <- kNN
+  
+  return(df_out)
+  
+}
+
+# can we estimate gamma and delta from the closest elements?
+# validation based on auc using ED distance between param as predictor
+compute_auc <- function(id_lib, 
+                        matrix_data, 
+                        combat_param, 
+                        kNN){
+  
+  # distance of logFCs across CLs
+  dist_guides <- as.matrix(dist(t(matrix_data[[id_lib]])))
+  closest_guides <- apply(dist_guides, 1, function(x) order(x)[1:(kNN + 1)], simplify = FALSE)
+  n_pairs <- ncol(matrix_data[[id_lib]])
+  
+  # distance of the gamma,delta parameters across guide pairs 
+  param_vector <- data.frame(gamma = combat_param$gamma.star[id_lib,], 
+                             delta = combat_param$delta.star[id_lib,])
+  dist_param <- as.matrix(dist(param_vector, method = "euclidean"))
+  
+  # response = kNN of the guide pair
+  # predictor = distance between the guide pair and all the other guide pairs
+  auc_res <- sapply(1:n_pairs, function(x)
+    as.numeric(auc(roc(
+      response = as.numeric(1:n_pairs %in% closest_guides[[x]]), 
+      predictor = unname(dist_param[,x]), 
+      quiet = TRUE, 
+      direction = ">"))))
+  
+  df_out <- data.frame(SEQ_pair = colnames(matrix_data[[id_lib]]),
+                       auc = auc_res, 
+                       id_lib = id_lib, 
+                       kNN = kNN)
+  return(df_out)
+}
+
+# combine all validation strategies:
+validate_NN_approximation <- function(list_df, 
+                                      CL_ann,
+                                      save_plot = FALSE,
+                                      save_ext = "png",
+                                      outfold = NULL){
+  
+  res <- combat_correction(list_df, 
+                           CL_ann = CL_ann,
+                           save_plot = FALSE, 
+                           show_plot = TRUE)
+  
+  corrected_common <- res$corrected
+  raw_common <- res$raw
+  common_pairs <- rownames(raw_common)
+  matrix_data <- lapply(harmonize_per_CL(list_df, CL_ann), function(x) 
+    x[,common_pairs])
+  
+  # varying kNN
+  kNN_list <- c(5, seq(10, 50, by = 10))
+  df_kNN <- data.frame()
+  # Validation 1: cohens'D  between neightbours of gp i vs not neighb 
+  # (based on euclidean distance)
+  for (kNN_p in kNN_list) {
+    print(kNN_p)
+    tmp <- lapply(1:length(list_df), function(x)
+      get_stat_closest(id_lib = x, 
+                       matrix_data = matrix_data, 
+                       combat_param = res$ComBat_res, 
+                       kNN = kNN_p))  
+    df_kNN <- rbind(do.call(rbind, tmp), df_kNN)
+  }
+  
+  pl <- ggplot(df_kNN, aes(x = as.factor(kNN),
+                           y = cohens_d)) +
+    geom_boxplot() +
+    facet_wrap(.~type) +
+    xlab("k Nearest Neigh.") +
+    ylab("Cohen's d:\n |param_i - neigh.| VS |param_i - not neigh.|") +
+    theme_bw()
+  print(pl)
+  if (save_plot) {
+    ggsave(plot = pl, 
+           filename = sprintf("%svalidation_kNN_cohensd.%s", outfold, save_ext), 
+           width = 6, 
+           height = 4)    
+  }
+  
+  ### Validation 2:
+  # create TPR, FPR. Compare the selection of closest kNN with the "closest" param
+  auc_kNN <- data.frame()
+  for (kNN_p in kNN_list) {
+    print(kNN_p)
+    tmp <- lapply(1:length(list_df), function(x)
+      compute_auc(id_lib = x, 
+                  matrix_data = matrix_data, 
+                  combat_param = res$ComBat_res, 
+                  kNN = kNN_p))  
+    auc_kNN <- rbind(do.call(rbind, tmp), auc_kNN)
+  }
+  
+  pl <- ggplot(auc_kNN, aes(x = as.factor(kNN),
+                            y = auc)) +
+    geom_boxplot() +
+    xlab("k Nearest Neigh.") +
+    ylab("AUROC") +
+    theme_bw()
+  print(pl)
+  if (save_plot) {
+    ggsave(plot = pl, 
+           filename = sprintf("%svalidation_kNN_AUC.%s", outfold, save_ext), 
+           width = 4, 
+           height = 4)
+  }
+  
+  
+  return(list(cohensd_kNN = df_kNN, 
+              auc_kNN = auc_kNN))
+  
+}
+
+# approximate combat param via kNN
+param_approx_kNN <- function(
+    matrix_data_list, 
+    gamma_matrix, 
+    delta_matrix, 
+    kNN, 
+    outfold = NULL, 
+    save_plot = FALSE, 
+    save_ext = "png",
+    show_plot = TRUE, 
+    list_df = NULL){
+  
+  res <- list()
+  for (id in 1:length(matrix_data_list)) {
+    
+    matrix_data <- matrix_data_list[[id]]
+    gamma_param <- gamma_matrix[id,]
+    delta_param <- delta_matrix[id,]
+    
+    common_pairs <- names(gamma_param)
+    unique_pairs <- setdiff(colnames(matrix_data), common_pairs)
+    
+    # distance between common pairs and unique pairs only
+    dist_logFCs <- sqrt(dist2(t(matrix_data[,common_pairs]),
+                              t(matrix_data[,unique_pairs])))
+    
+    closest_guides <- apply(dist_logFCs, 2, function(x) 
+      order(x)[1:kNN], 
+      simplify = TRUE)
+    
+    gamma_approx_unique <- apply(closest_guides, 2, function(x)
+      mean(gamma_param[common_pairs[x]])
+    )
+    
+    delta_approx_unique <- apply(closest_guides, 2, function(x)
+      mean(delta_param[common_pairs[x]])
+    )
+    res[[id]] <- list(gamma = gamma_approx_unique, 
+                      delta = delta_approx_unique)
+  }
+  
+  
+  if (show_plot) {
+    
+    param_approx <- res
+    libs <- names(matrix_data_list)
+    
+    df_annot <- mapply(function(x, y) 
+      y[match(names(x$delta), y$SEQ_pair), !grepl("SIDM", colnames(y))], 
+      x = param_approx, y = list_df, SIMPLIFY = FALSE)
+    df_annot <- do.call(rbind, df_annot)
+    
+    gamma_tmp <- lapply(param_approx, function(x) x$gamma)
+    df_pl_gamma <- data.frame(value = unlist(gamma_tmp), 
+                              param = "gamma", 
+                              df_annot)
+    
+    delta_tmp <- lapply(param_approx, function(x) x$delta)
+    df_pl_delta <- data.frame(value = unlist(delta_tmp), 
+                              param = "delta", 
+                              df_annot)
+    df_pl <- rbind(df_pl_delta, df_pl_gamma)
+    
+    # plot dist of parameters
+    pl_lib <- ggplot(df_pl, 
+                     aes(x = lib, y = value, fill = lib)) + 
+      geom_violin() + 
+      geom_boxplot(fill = "white", outlier.size = 1, width = 0.2) + 
+      theme_bw() + 
+      facet_wrap(.~param, scales = "free_y") +
+      theme(legend.position = "bottom") +
+      xlab("") +
+      ylab("Param KNN approximation")
+    
+    pl_class <- ggplot(df_pl, 
+                       aes(x = Note1, y = value, fill = lib)) + 
+      geom_boxplot(outlier.size = 0.5) + 
+      theme_bw() + 
+      facet_wrap(.~param, scales = "free_x") +
+      xlab("") + 
+      ylab("Param KNN approximation") +
+      theme(legend.position = "bottom") +
+      coord_flip()
+    
+    print(pl_lib)
+    print(pl_class)
+    
+    if (save_plot) {
+      ggsave(filename = sprintf("%skNNApprox_param_dist_libraries.%s", outfold, save_ext), 
+             units = "in", 
+             plot = pl_lib, 
+             width = 4, 
+             height = 4)
+      
+      ggsave(filename = sprintf("%skNNApprox_param_dist_GPclass.%s", outfold, save_ext), 
+             units = "in", 
+             plot = pl_class, 
+             width = 6, 
+             height = 5)
+    }
+  }
+  
+  return(res)
+  
+}
+
+# distance between each element in a matrix
+dist2 <- function(X,C) {
+  # from SNFtools
+  
+  ndata <- nrow(X)
+  ncentres <- nrow(C)
+  
+  sumsqX <- rowSums(X^2)
+  sumsqC <- rowSums(C^2)
+  
+  XC <- 2 * (X %*% t(C))
+  res <- matrix(rep(sumsqX, times = ncentres), ndata, ncentres) + 
+    t(matrix(rep(sumsqC, times = ndata), ncentres, ndata)) - XC
+  res[res < 0] <- 0
+  
+  return(res)
+}
+
+
+# adjust data, combat estimates per guide pairs
+adjust_alldata_kNN <- function(list_df, 
+                               CL_ann = CL_ann, 
+                               kNN, 
+                               outfold = NULL, 
+                               save_plot = FALSE, 
+                               save_ext = "png",
+                               show_plot = TRUE){
+  
+  combat_res_all <- combat_correction(list_df = list_df, 
+                                      CL_ann = CL_ann,
+                                      outfold = outfold, 
+                                      save_plot = save_plot, 
+                                      save_ext = save_ext,
+                                      show_plot = show_plot)
+  
+  combat_res_all$common_pairs <- rownames(combat_res_all$ComBat_res$correctedData)
+  
+  combat_res <- combat_res_all$ComBat_res
+  list_logFC <- harmonize_per_CL(list_df, CL_ann)
+  n_guide_common <- nrow(combat_res$correctedData)
+  
+  # get combat param
+  batch.design <- combat_res$batchDesign
+  gamma.star <- combat_res$gamma.star # additive batch effect
+  delta.star <- combat_res$delta.star # multiplicative batch effect
+  stand.mean <- combat_res$stdmean
+  var.pooled <- combat_res$varpool
+  
+  # standardize each guide pair, Mean and Sd computed across CLs
+  stand.mean_all <- lapply(list_logFC, function(x) rowMeans(t(x)) %*% t(rep(1, ncol(t(x)))))
+  var.pooled_all <- lapply(list_logFC, function(x) rowSds(t(x)) %*% t(rep(1, ncol(t(x)))))
+  # NOTE:
+  # we cannot use stand.mean and var.pooled (stdPrior) because we need to estimate guide pairs not in common
+  # but correlation is high for common pairs with this and ComBatCP strategy 
+  # >0.95 for stand.mean and >0.84 for var.pooled
+  s.data_all <- mapply(function(x,y,z) (t(x) - y)/z, 
+                       x = list_logFC, 
+                       y = stand.mean_all, 
+                       z = var.pooled_all, 
+                       SIMPLIFY = FALSE)
+  
+  # correct based on bayes estimates
+  mean_common <- mapply(function(x, y) 
+    matrix(gamma.star[x,], 
+           nrow = n_guide_common, 
+           ncol = nrow(y)), 
+    x = 1:nrow(gamma.star), y = list_logFC, SIMPLIFY = FALSE)
+  
+  var_common <- mapply(function(x, y) 
+    sqrt(delta.star[x,]) %*% t(rep(1,nrow(y))), 
+    x = 1:nrow(delta.star), y = list_logFC, 
+    SIMPLIFY = FALSE)
+  
+  # for those not in common, use kNN
+  param_approx <- param_approx_kNN(matrix_data_list = list_logFC, 
+                                   gamma_matrix = gamma.star,
+                                   delta_matrix = delta.star, 
+                                   kNN = kNN,
+                                   outfold = outfold, 
+                                   save_ext = save_ext,
+                                   save_plot = save_plot, 
+                                   show_plot = show_plot, 
+                                   list_df = list_df)
+  
+  mean_unique <- var_unique <- list()
+  mean_all <- var_all <- list()
+  
+  for (id in 1:length(list_logFC)) {
+    
+    mean_unique[[id]] <- matrix(param_approx[[id]]$gamma, 
+                                nrow = length(param_approx[[id]]$gamma), 
+                                ncol = nrow(list_logFC[[id]]))
+    
+    var_unique[[id]] <- matrix(param_approx[[id]]$delta, 
+                               nrow = length(param_approx[[id]]$delta), 
+                               ncol = nrow(list_logFC[[id]]))
+    
+    rownames(mean_common[[id]]) <- colnames(gamma.star)
+    rownames(var_common[[id]]) <- colnames(delta.star)
+    rownames(mean_unique[[id]]) <- names(param_approx[[id]]$gamma)
+    rownames(var_unique[[id]]) <- names(param_approx[[id]]$delta)
+    
+    # put back together
+    var_all[[id]] <- rbind(var_common[[id]], var_unique[[id]])
+    mean_all[[id]] <- rbind(mean_common[[id]], mean_unique[[id]])
+    # order properly
+    var_all[[id]] <- var_all[[id]][rownames(s.data_all[[id]]),]
+    mean_all[[id]] <- mean_all[[id]][rownames(s.data_all[[id]]),]
+    
+  }
+  
+  
+  adjusted.data_all <- mapply(function(x,y,z) (x - y)/z, 
+                              x = s.data_all, 
+                              y =  mean_all, 
+                              z = var_all, 
+                              SIMPLIFY = FALSE)
+  
+  # add original mean and variance back
+  adjusted.data_all <- mapply(function(x,y,z) t( (x*z) + y ), 
+                              x = adjusted.data_all, 
+                              y = stand.mean_all, 
+                              z = var.pooled_all, 
+                              SIMPLIFY = FALSE)
+  
+  # save param
+  gamma_mean <- lapply(mean_all, function(x) x[,1])
+  names(gamma_mean) <- names(list_df)
+  delta_var <- lapply(var_all, function(x) x[,1])
+  names(delta_var) <- names(list_df)
+  
+  return(list(adj = adjusted.data_all, 
+              original = list_logFC, 
+              combat = combat_res_all, 
+              param_notmatching = param_approx, 
+              param_all = list(gamma_mean = gamma_mean, delta_var = delta_var)))
+  
+}
+
+# plot distributions per CL
+plot_CL_distribution <- function(original, 
+                                 adjusted, 
+                                 list_df,
+                                 common_pairs, 
+                                 outfold = NULL, 
+                                 show_plot = TRUE,
+                                 save_plot = FALSE, 
+                                 save_ext = "png"
+){
+  
+  CL_names <- rownames(original[[1]])
+  # get annotation
+  df_annot <- mapply(function(x, y) 
+    x[match(colnames(y), x$SEQ_pair), !grepl("SIDM", colnames(x))], 
+    x = list_df[names(original)], y = original, SIMPLIFY = FALSE)
+  
+  df_annot_common <- lapply(df_annot, function(x) x[match(common_pairs, x$SEQ_pair),])
+  # get unique
+  df_annot_common_unique <- data.frame(SEQ_pair = df_annot_common[[1]]$SEQ_pair, 
+                                       Gene_Pair = df_annot_common[[1]]$Gene_Pair, 
+                                       Note1 = apply(sapply(df_annot_common, function(x) x$Note1), 
+                                                     1, function(y) paste0(sort(unique(y)), collapse = ",")), 
+                                       Note2 = apply(sapply(df_annot_common, function(x) x$Note2), 
+                                                     1, function(y) paste0(sort(unique(y)), collapse = ",")))
+  ## plot everything  
+  pl <- list()
+  df_CL <- list()
+  for (i in 1:length(CL_names)) {
+    
+    CL_name <- CL_names[i]
+    print(sprintf("%s", CL_name))
+    
+    df_tmp <- mapply(function(x,y,z) 
+      cbind(z, data.frame(logFC_or = x[CL_name,, drop = T], logFC_adj = y[CL_name,, drop = T])), 
+      x = original, y = adjusted, z = df_annot, SIMPLIFY = F)
+    
+    df_CL[[i]] <- bind_rows(df_tmp)
+    print(dim(df_CL[[i]]))
+    
+    df_CL[[i]] <- left_join(suffix = c("lib_spec", "lib_common"), 
+                            df_CL[[i]], 
+                            df_annot_common_unique, 
+                            by = "SEQ_pair")
+    df_CL[[i]]$Note1 <- df_CL[[i]]$Note1lib_common
+    df_CL[[i]]$Note1[is.na(df_CL[[i]]$Note1lib_common)] <- df_CL[[i]]$Note1lib_spec[is.na(df_CL[[i]]$Note1lib_common)]
+    
+    pl1 <- ggplot(df_CL[[i]], 
+                  aes(x = Note1, y = logFC_adj, fill = lib)) + 
+      geom_boxplot(outlier.size = 0.5) + 
+      theme_bw() + 
+      xlab("") +
+      coord_flip() + 
+      theme(axis.text.y = element_blank()) + 
+      ggtitle(sprintf("%s: Corrected", CL_name))
+    
+    pl2 <- ggplot(df_CL[[i]],
+                  aes(x = Note1, y = logFC_or, fill = lib)) + 
+      geom_boxplot(outlier.size = 0.5) + 
+      theme_bw() + 
+      xlab("") +
+      coord_flip() + 
+      ggtitle(sprintf("%s: Raw", CL_name))
+    
+    pl3 <- ggplot(subset(df_CL[[i]], SEQ_pair %in% common_pairs),
+                  aes(x = Note1, y = logFC_adj, fill = lib)) +
+      geom_boxplot(outlier.size = 0.5) +
+      theme_bw() +
+      xlab("") +
+      coord_flip() +
+      theme(axis.text.y = element_blank()) + 
+      ggtitle(sprintf("%s: Corrected (common pairs)", CL_name))
+    
+    pl4 <- ggplot(subset(df_CL[[i]], SEQ_pair %in% common_pairs),
+                  aes(x = Note1, y = logFC_or, fill = lib)) +
+      geom_boxplot(outlier.size = 0.5) +
+      theme_bw() +
+      xlab("") +
+      coord_flip() +
+      ggtitle(sprintf("%s: Raw (common pairs)", CL_name))
+    
+    pl[[i]] <- ggpubr::ggarrange(plotlist = list(pl4, pl3, pl2, pl1), 
+                                 heights = c(0.8,1),
+                                 widths = c(1, 0.6),
+                                 ncol = 2, 
+                                 nrow = 2, 
+                                 common.legend = TRUE)
+    if (show_plot) {
+      print(pl[[i]])
+    }
+    
+  }
+  
+  # plot dist across all CLs
+  df_tot <- do.call(rbind, df_CL)  
+  pl1 <- ggplot(df_tot, 
+                aes(x = Note1, y = logFC_adj, fill = lib)) + 
+    geom_boxplot(outlier.size = 0.2) + 
+    theme_bw() + 
+    xlab("") +
+    ylab("logFC") +
+    coord_flip() + 
+    theme(axis.text.y = element_blank()) + 
+    ggtitle(sprintf("%s: Corrected", "All CLs"))
+  
+  pl2 <- ggplot(df_tot,
+                aes(x = Note1, y = logFC_or, fill = lib)) + 
+    geom_boxplot(outlier.size = 0.2) + 
+    theme_bw() + 
+    xlab("") +
+    ylab("logFC") +
+    coord_flip() + 
+    theme(axis.text.y = element_text(size = 10)) + 
+    ggtitle(sprintf("%s: Raw", "All CLs"))
+  
+  pl3 <- ggplot(subset(df_tot, SEQ_pair %in% common_pairs), 
+                aes(x = Note1lib_common, y = logFC_adj, fill = lib)) + 
+    geom_boxplot(outlier.size = 0.2) + 
+    theme_bw() + 
+    xlab("") +
+    ylab("logFC") +
+    coord_flip() + 
+    theme(axis.text.y = element_blank()) + 
+    ggtitle(sprintf("%s: Corrected (common pairs)", "All CLs"))
+  
+  pl4 <- ggplot(subset(df_tot, SEQ_pair %in% common_pairs),
+                aes(x = Note1lib_common, y = logFC_or, fill = lib)) + 
+    geom_boxplot(outlier.size = 0.2) + 
+    theme_bw() + 
+    xlab("") +
+    ylab("logFC") + 
+    coord_flip() + 
+    theme(axis.text.y = element_text(size = 10)) + 
+    ggtitle(sprintf("%s: Raw (common pairs)", "All CLs"))
+  
+  pl_class <- ggpubr::ggarrange(plotlist = list(pl4, pl3, pl2, pl1), 
+                                heights = c(0.8,1),
+                                widths = c(1, 0.6),
+                                ncol = 2, 
+                                nrow = 2, 
+                                align = "h", 
+                                common.legend = TRUE)
+  
+  if (save_plot) {
+    ggsave(filename = sprintf("%sALLCLs_distr_perClass.%s", outfold, save_ext), 
+           units = "in", 
+           plot = pl_class, 
+           width = 8, 
+           height = 8)
+  }
+  
+  pl1 <- ggplot(df_tot, 
+                aes(x = lib, y = logFC_adj, fill = lib)) + 
+    geom_boxplot(outlier.size = 0.5) + 
+    theme_bw() + 
+    xlab("") +
+    ylab("logFC") +
+    ggtitle(sprintf("%s: Corrected", "All CLs"))
+  
+  pl2 <- ggplot(df_tot,
+                aes(x = lib, y = logFC_or, fill = lib)) + 
+    geom_boxplot(outlier.size = 0.5) + 
+    theme_bw() + 
+    xlab("") +
+    ylab("logFC") +
+    ggtitle(sprintf("%s: Raw", "All CLs"))
+  
+  pl3 <- ggplot(subset(df_tot, SEQ_pair %in% common_pairs), 
+                aes(x = lib, y = logFC_adj, fill = lib)) + 
+    geom_boxplot(outlier.size = 0.5) + 
+    theme_bw() + 
+    xlab("") +
+    ylab("logFC") +
+    ggtitle(sprintf("%s: Corrected (common pairs)", "All CLs"))
+  
+  pl4 <- ggplot(subset(df_tot, SEQ_pair %in% common_pairs),
+                aes(x = lib, y = logFC_or, fill = lib)) + 
+    geom_boxplot(outlier.size = 0.5) + 
+    theme_bw() + 
+    xlab("") +
+    ylab("logFC") +
+    ggtitle(sprintf("%s: Raw (common pairs)", "All CLs"))
+  
+  pl_lib <- ggpubr::ggarrange(plotlist = list(pl4, pl3, pl2, pl1),
+                              ncol = 2, 
+                              nrow = 2, 
+                              align = "h", 
+                              common.legend = TRUE)
+  
+  
+  if (show_plot) {
+    print(pl_lib)
+  }
+  
+  if (save_plot) {
+    ggsave(filename = sprintf("%sALLCLs_distr_perLib.%s", outfold, save_ext), 
+           units = "in", 
+           plot = pl_lib, 
+           width = 6, 
+           height = 7)
+  }
+  
+  return(df_tot)
+}
+
+test_distributions_per_class_allCLs <- function(df, 
+                                                outfold = NULL, 
+                                                save_plot = FALSE, 
+                                                save_ext = "png"){
+  
+  df <- df %>%
+    dplyr::filter(!Note1 %in% "AnchorCombinations")
+  class_names <- unique(df$Note1)
+  
+  ktest_adj <- sapply(class_names, function(x) kruskal.test(x = df$logFC_adj[df$Note1 %in% x], 
+                                                            g = df$lib[df$Note1 %in% x])$p.value)
+  ktest_adj <- data.frame(pvalue = unname(ktest_adj), class = names(ktest_adj), type = "ComBat Adjusted")
+  
+  ktest_or <- sapply(class_names, function(x) kruskal.test(x = df$logFC_or[df$Note1 %in% x], 
+                                                           g = df$lib[df$Note1 %in% x])$p.value)
+  ktest_or <- data.frame(pvalue = unname(ktest_or), class = names(ktest_or), type = "Raw")
+  
+  ktest_all <- rbind(ktest_adj, ktest_or) %>% 
+    mutate(log10p = -log10(pvalue + .Machine$double.xmin))
+  
+  pl <- ggplot(ktest_all, aes(x = class,
+                              y = log10p,
+                              col = type)) +
+    geom_hline(yintercept = -log10(0.05), linetype = "dashed", col = "grey50") +
+    # geom_bar(stat = "identity", position = position_dodge()) + 
+    geom_point(size = 2, position = position_dodge(width = 0.5)) +
+    # geom_text_repel(size = 3, max.overlaps = Inf) +
+    theme_bw() + 
+    theme(legend.position = "bottom", legend.title = element_blank()) + 
+    xlab("") + 
+    ylab("-log10 P-value Kruskal-Wallis test") + 
+    ggtitle("All CLs") + 
+    coord_flip()
+  print(pl)
+  
+  
+  if (save_plot) {
+    ggsave(filename = sprintf("%skruskaltest_perclass_ALLCLs.%s", outfold, save_ext), 
+           units = "in", 
+           plot = pl, 
+           width = 5, 
+           height = 4)
+  }
+  
+  return(ktest_all )
+}
+
+test_distributions_per_class <- function(data_adj, 
+                                         data_or, 
+                                         outfold = NULL, 
+                                         save_plot = FALSE, 
+                                         show_plot = TRUE, 
+                                         save_ext = "png"){
+  
+  CL_names <- colnames(data_adj)[-(1:13)]
+  # remove AnchorCombinations
+  data_adj <- data_adj %>%
+    dplyr::filter(!Note1 %in% "AnchorCombinations")
+  
+  data_or <- data_or %>%
+    dplyr::filter(!Note1 %in% "AnchorCombinations")
+  
+  class_names <- unique(data_adj$Note1)
+  ktest_adj <- ktest_or <- list()
+  for (i in 1:length(CL_names)) {
+    CL <- CL_names[i]
+    ktest_adj[[i]] <- sapply(class_names, function(x) kruskal.test(x = data_adj[data_adj$Note1 %in% x, CL], g = data_adj[data_adj$Note1 %in% x, "lib"])$p.value)
+    ktest_adj[[i]] <- data.frame(pvalue = unname(ktest_adj[[i]]), class = names(ktest_adj[[i]]), CL = CL)
+    ktest_or[[i]] <- sapply(class_names, function(x) kruskal.test(x = data_or[data_or$Note1 %in% x, CL], g = data_or[data_or$Note1 %in% x, "lib"])$p.value)
+    ktest_or[[i]] <- data.frame(pvalue = unname(ktest_or[[i]]), class = names(ktest_or[[i]]), CL = CL)
+  }
+  ktest_adj <- do.call(rbind, ktest_adj)
+  ktest_or <- do.call(rbind, ktest_or)
+  ktest_all <- full_join( ktest_adj, ktest_or, 
+                          by = c("CL", "class"), 
+                          suffix = c("_adjusted", "_original")) %>%
+    dplyr::mutate(log10_pvalue_adjusted = -log10(pvalue_adjusted + .Machine$double.xmin), 
+                  log10_pvalue_original = -log10(pvalue_original + .Machine$double.xmin))
+  
+  pl <- ggplot(ktest_all, aes(x = log10_pvalue_adjusted,
+                              y = log10_pvalue_original,
+                              col = CL,
+                              label = CL)) +
+    facet_wrap(.~class, ncol = 2) +
+    geom_point(size = 2) +
+    geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+    geom_vline(xintercept = -log10(0.05), linetype = "dashed", col = "red") +
+    geom_hline(yintercept = -log10(0.05), linetype = "dashed", col = "red") +
+    # geom_text_repel(size = 3, max.overlaps = Inf) +
+    theme_bw() + 
+    theme(legend.position = "right", legend.title = element_blank()) + 
+    xlab("Corrected") + 
+    ylab("Raw") + 
+    ggtitle("-log10 P-value from Kruskal-Wallis test")
+  
+  if (show_plot) {
+    print(pl)
+  }
+  
+  if (save_plot) {
+    ggsave(filename = sprintf("%skruskaltest_perclass_perCL.%s", outfold, save_ext), 
+           units = "in", 
+           plot = pl, 
+           width = 6, 
+           height = 8)
+  }
+  
+  return(ktest_all)
+  
+}
+
+plot_library_genes <- function(data_adj, 
+                               data_or, 
+                               essential_genes, 
+                               outfold = NULL, 
+                               show_plot = TRUE,
+                               save_plot = FALSE, 
+                               save_ext = "png"){
+  
+  data_annot_lib <- data_adj %>%
+    dplyr::filter(Note1 %in% c("LibrarySingletons", "LibraryCombinations")) %>%
+    dplyr::mutate(Gene1_essential = Gene1 %in% essential_genes, 
+                  Gene1_or_Gene2_essential = Gene1 %in% essential_genes | Gene2 %in% essential_genes) 
+  
+  data_adj_lib <- data_adj %>%
+    dplyr::filter(Note1 %in% c("LibrarySingletons", "LibraryCombinations"))
+  data_or_lib <- data_or %>%
+    dplyr::filter(Note1 %in% c("LibrarySingletons", "LibraryCombinations"))
+  CL_names <- colnames(data_adj_lib)[-(1:13)]
+  other_names <- colnames(data_adj_lib)[1:13]
+  
+  tmp <- lapply(CL_names, function(x) data_adj_lib[, c(other_names, x)] %>% 
+                  dplyr::rename(logFC = !!(x)) %>% 
+                  dplyr::mutate(CL = x))
+  data_adj_lib <- do.call(rbind, tmp)
+  
+  tmp <- lapply(CL_names, function(x) data_or_lib[, c(other_names, x)] %>% 
+                  dplyr::rename(logFC = !!(x)) %>% 
+                  dplyr::mutate(CL = x))
+  data_or_lib <- do.call(rbind, tmp)
+  
+  pl1 <- ggplot(data_adj_lib, 
+                aes(x = lib, y = logFC, fill = lib)) + 
+    geom_boxplot(outlier.size = 1) + 
+    theme_bw() + 
+    xlab("") +
+    ggtitle(sprintf("%s: Corrected", "All CLs")) + 
+    theme(legend.position = "none")
+  
+  pl2 <- ggplot(data_or_lib, 
+                aes(x = lib, y = logFC, fill = lib)) + 
+    geom_boxplot(outlier.size = 1) + 
+    theme_bw() + 
+    xlab("") +
+    ggtitle(sprintf("%s: Raw", "All CLs")) + 
+    theme(legend.position = "none")
+  
+  pl_lib <- ggpubr::ggarrange(plotlist = list(pl2, pl1),
+                              ncol = 2)
+  
+  data_lib_perc <- data_annot_lib %>%
+    dplyr::group_by(lib) %>%
+    dplyr::summarise(frac_Gene1_ess = sum(Gene1_essential)/length(Gene1_essential), 
+                     n_Gene1_ess = sum(Gene1_essential),
+                     frac_Gene1_or_Gene2_ess = sum(Gene1_or_Gene2_essential)/length(Gene1_or_Gene2_essential), 
+                     n_Gene1_or_Gene2_ess = sum(Gene1_or_Gene2_essential), 
+                     n_tot = length(Gene1_essential))
+  
+  pl_frac <- ggplot(data_lib_perc , aes(x = frac_Gene1_ess,
+                                        y = n_Gene1_ess,
+                                        col = lib,
+                                        label = lib)) +
+    geom_point(size = 2) +
+    # geom_line(alpha = 0.5) + 
+    geom_text_repel(size = 3, max.overlaps = Inf) +
+    guides(color = "none", fill = "none") +
+    theme_bw() + 
+    xlab("Fraction of pairs with Gene1 essential") + 
+    ylab("N. of pairs with Gene1 essential")
+  
+  if (show_plot) {
+    print(pl_lib)
+    print(pl_frac)
+  }
+  
+  if (save_plot) {
+    ggsave(filename = sprintf("%sALLCLs_distr_perLib_LibraryGenes.%s", outfold, save_ext), 
+           units = "in", 
+           plot = pl_lib, 
+           width = 5, 
+           height = 5)
+    
+    ggsave(filename = sprintf("%sFraction_Gene1_ess_perLib_LibraryGenes.%s", outfold, save_ext), 
+           units = "in", 
+           plot = pl_frac, 
+           width = 3, 
+           height = 3)
+  }
+  
+  return(list(logFC_or = data_or_lib, 
+              logFC_adj = data_adj_lib, 
+              perc = data_lib_perc))
+  
+}
+
+
+
+
 
 
