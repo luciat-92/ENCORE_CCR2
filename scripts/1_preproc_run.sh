@@ -21,4 +21,4 @@ module load R/4.1.0
 # Rscript scripts/1a_preproc_project_score_raw.R
 
 # then run for encore
-Rscript scripts/1b_preproc_encore_raw.R
+Rscript R/1b_preproc_encore_raw.R

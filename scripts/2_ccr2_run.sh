@@ -37,7 +37,7 @@ CL_name=$(eval echo "\${CLs[${idx}-1]}")
 echo "$TYPE_PRE $TYPE_CASNEG $CL_name" 
 mkdir -p ${GROUP_FOLDER}/CRISPR_combinatorial/CRISPRcleanRatSquared/DATA_FREEZE_v4_NOV_2023/${TYPE_PRE}/${TYPE_CASNEG}/
   
-Rscript scripts/2_ccr2_perCL_run.R \
+Rscript R/2_ccr2_perCL_run.R \
 	--CL_name ${CL_name} \
 	--fold_input_dual ${GROUP_FOLDER}/CRISPR_combinatorial/data/encore/DATA_FREEZE_v4_NOV_2023/${TYPE_PRE}/${TYPE_CASNEG}/ \
   --fold_input_single ${GROUP_FOLDER}/datasets/PROJECT_SCORE/SINGLE_CL/ \

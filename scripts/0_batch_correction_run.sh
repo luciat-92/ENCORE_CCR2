@@ -17,4 +17,4 @@
 module load nlopt/2.7.0-intel-oneapi-mkl-2021.4.0 
 module load R/4.1.0
 
-Rscript scripts/0_batch_correction_encore.R
+Rscript R/0_batch_correction_encore.R
