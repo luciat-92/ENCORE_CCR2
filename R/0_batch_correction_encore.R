@@ -7,7 +7,7 @@ library(pROC)
 library(CRISPRcleanR)
 library(effectsize)
 
-source("R/0_batchcorr_auxilary_functions.R")
+source("R/0_auxilary_functions.R")
 
 #### 
 setwd("/group/iorio/lucia/")
@@ -47,63 +47,63 @@ cneg_label <- names(res_cneg)
 ###############################
 
 for (idx in 1:length(res_cneg)) {
-  
+
   print(cneg_label[idx])
-  
+
   model_encore_table <- get_sample_ann(
-    data = res_cneg[[idx]]$data, 
+    data = res_cneg[[idx]]$data,
     file_cmp = sprintf("%smodel_annotation/model_list_20230801.csv", fold_cmp))
-  
+
   # get matrix
   data_COLO <- harmonize_per_CL(
-    list_df = res_cneg[[idx]]$data[grepl("colo",names(res_cneg[[idx]]$data))], 
+    list_df = res_cneg[[idx]]$data[grepl("colo",names(res_cneg[[idx]]$data))],
     CL_ann = model_encore_table)
-  
+
   data_BRCA <- harmonize_per_CL(
-    list_df = res_cneg[[idx]]$data[grepl("brca", names(res_cneg[[idx]]$data))], 
+    list_df = res_cneg[[idx]]$data[grepl("brca", names(res_cneg[[idx]]$data))],
     CL_ann = model_encore_table)
-  
+
   # get final table
   df_COLO <- get_complete_table(
-    list_df = res_cneg[[idx]]$data[grepl("colo",names(res_cneg[[idx]]$data))], 
+    list_df = res_cneg[[idx]]$data[grepl("colo",names(res_cneg[[idx]]$data))],
     list_matrix = data_COLO)
-  
+
   df_BRCA <- get_complete_table(
-    list_df = res_cneg[[idx]]$data[grepl("brca",names(res_cneg[[idx]]$data))], 
+    list_df = res_cneg[[idx]]$data[grepl("brca",names(res_cneg[[idx]]$data))],
     list_matrix = data_BRCA)
-  
+
   # save output
   system(paste0("mkdir -p ", fold_out, "/ORIGINAL/", cneg_label[idx]))
-  write.table(file = sprintf("%sORIGINAL/%s/COLO_FINAL_EXACT_logFC_sgRNA.txt", fold_out, cneg_label[idx]), 
-              x = df_COLO, 
-              quote = F, 
-              col.names = T, 
-              row.names = F, 
+  write.table(file = sprintf("%sORIGINAL/%s/COLO_FINAL_EXACT_logFC_sgRNA.txt", fold_out, cneg_label[idx]),
+              x = df_COLO,
+              quote = F,
+              col.names = T,
+              row.names = F,
               sep = "\t")
-  
-  write.table(file = sprintf("%sORIGINAL/%s/BRCA_FINAL_EXACT_logFC_sgRNA.txt", fold_out, cneg_label[idx]), 
-              x = df_BRCA, 
-              quote = F, 
-              col.names = T, 
-              row.names = F, 
+
+  write.table(file = sprintf("%sORIGINAL/%s/BRCA_FINAL_EXACT_logFC_sgRNA.txt", fold_out, cneg_label[idx]),
+              x = df_BRCA,
+              quote = F,
+              col.names = T,
+              row.names = F,
               sep = "\t")
-  
+
   # save combined libraries (only once!)
   if (!file.exists(sprintf("%sORIGINAL/ENCORE_GI_COREAD_Library_ALL.txt", fold_out))) {
-    write.table(file = sprintf("%sORIGINAL/ENCORE_GI_COREAD_Library_ALL.txt", fold_out), 
-                x = bind_rows(res_cneg[[1]]$library[grepl("colo",names(res_cneg[[1]]$library))]), 
-                quote = F, 
-                col.names = T, 
-                row.names = F, 
+    write.table(file = sprintf("%sORIGINAL/ENCORE_GI_COREAD_Library_ALL.txt", fold_out),
+                x = bind_rows(res_cneg[[1]]$library[grepl("colo",names(res_cneg[[1]]$library))]),
+                quote = F,
+                col.names = T,
+                row.names = F,
                 sep = "\t")
   }
-  
+
   if (!file.exists(sprintf("%sORIGINAL/ENCORE_GI_BRCA_Library_ALL.txt", fold_out))) {
-    write.table(file = sprintf("%sORIGINAL/ENCORE_GI_BRCA_Library_ALL.txt", fold_out), 
-              x = bind_rows(res_cneg[[1]]$library[grepl("brca",names(res_cneg[[1]]$library))]), 
-              quote = F, 
-              col.names = T, 
-              row.names = F, 
+    write.table(file = sprintf("%sORIGINAL/ENCORE_GI_BRCA_Library_ALL.txt", fold_out),
+              x = bind_rows(res_cneg[[1]]$library[grepl("brca",names(res_cneg[[1]]$library))]),
+              quote = F,
+              col.names = T,
+              row.names = F,
               sep = "\t")
   }
 }

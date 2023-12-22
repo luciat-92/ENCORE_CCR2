@@ -29,12 +29,12 @@ sbatch scripts/1_preproc_run.R
 #### STEP 2:
 Application of [CRISPRcleanR^2](https://github.com/luciat-92/CRISPRcleanRatSquared.git) to each cell line, type of preprocessing (ORIGINAL or BATCH CORRECTED) and type of cas9Negative, separately. Bash script to run in parallel.
 ```
-sbatch --array=1-33%11 scripts/2_ccr2_run.sh ORIGINAL c91
-sbatch --array=1-33%11 scripts/2_ccr2_run.sh ORIGINAL c92
-sbatch --array=1-33%11 scripts/2_ccr2_run.sh ORIGINAL cavg
-sbatch --array=1-33%11 scripts/2_ccr2_run.sh BATCH_CORRECTED c91
-sbatch --array=1-33%11 scripts/2_ccr2_run.sh BATCH_CORRECTED c92
-sbatch --array=1-33%11 scripts/2_ccr2_run.sh BATCH_CORRECTED cavg
+sbatch --array=1-32 scripts/2_ccr2_run.sh ORIGINAL c91
+sbatch --array=1-32 scripts/2_ccr2_run.sh ORIGINAL c92
+sbatch --array=1-32 scripts/2_ccr2_run.sh ORIGINAL cavg
+sbatch --array=1-32 scripts/2_ccr2_run.sh BATCH_CORRECTED c91
+sbatch --array=1-32 scripts/2_ccr2_run.sh BATCH_CORRECTED c92
+sbatch --array=1-32 scripts/2_ccr2_run.sh BATCH_CORRECTED cavg
 ```
 
 #### STEP 3:

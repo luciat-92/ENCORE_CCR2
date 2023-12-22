@@ -13,7 +13,7 @@ parser$add_argument("--CL_name", type = "character", help = "Cell line name as a
 parser$add_argument("--fold_input_dual", type = "character", help = "path to folder with preprocessed data from ENCORE")
 parser$add_argument("--fold_input_single", type = "character", help = "path to folder with preprocessed data from PROJECT SCORE")
 parser$add_argument("--fold_output", type = "character", help = "path to folder to save output")
-parser$add_argument("--fold_output", type = "character", help = "path to folder with CN file")
+parser$add_argument("--fold_CN", type = "character", help = "path to folder with CN file")
 parser$add_argument("--root_path", type = "character", help = "base path, default is group-share", default = "/group/iorio/lucia/")
 
 args <- parser$parse_args()
@@ -25,9 +25,11 @@ fold_CN <- args$fold_CN
 root_path <- args$root_path
 
 print(paste("CL:", CL_name))
+print(fold_input_dual)
 
 ###########################################
 # root_path <- "/group/iorio/lucia/"
+# CL_name = "HCC2998"
 # fold_input_dual <- sprintf("%sCRISPR_combinatorial/data/encore/DATA_FREEZE_v4_NOV_2023/BATCH_CORRECTED/c91/", root_path)
 # fold_input_single <- sprintf("%sdatasets/PROJECT_SCORE/SINGLE_CL/", root_path)
 # fold_output <- sprintf("%sCRISPR_combinatorial/CRISPRcleanRatSquared/DATA_FREEZE_v4_NOV_2023/BATCH_CORRECTED/c91/", root_path)
@@ -35,6 +37,7 @@ print(paste("CL:", CL_name))
 ###########################################
 
 source("R/2_auxilary_functions.R")
+
 # load CL info
 model_dual_table <- read_tsv(sprintf("%s/model_list.tsv", fold_input_dual), 
                         show_col_types = FALSE) %>%
@@ -85,6 +88,20 @@ if (nrow(model_dual_COLO) > 0) {
   CL_name <- input_dual$CL_name
   out_fold <- input_dual$out_fold
   
+  # if NA is present, remove from dual_logFC and dual_library
+  id_rm <- dual_logFC %>% 
+    dplyr::filter(is.na(get(sprintf("%s_logFC", CL_name)))) %>%
+    dplyr::pull(ID_lib)
+  
+  if (length(id_rm) > 0) {
+    print(sprintf("Removed %s guide pairs including NAs in logFC", length(id_rm)))
+    dual_logFC <- dual_logFC %>% 
+      dplyr::filter(!ID_lib %in% id_rm)
+    dual_library <- dual_library %>% 
+      dplyr::filter(!ID_lib %in% id_rm)
+  }
+  
+  
   if (any(CNA$CN_category == "Amp")) {
     CN_thr <- round(min(CNA$C[CNA$CN_category == "Amp"]))  
   }else{
@@ -130,7 +147,9 @@ if (nrow(model_dual_BRCA) > 0) {
     model_single = model_single_BRCA,
     tissue = "BRCA", 
     copy_number_file = sprintf("%sMERGED_SEGMENT_COPYNUMBER.txt", fold_CN),
-    input_fold = fold_input_dual)
+    fold_input_dual = fold_input_dual, 
+    fold_input_single = fold_input_single,
+    fold_output = fold_output)
   
   # get single
   fn_single <- BRCA_input_list$single$count_file
@@ -142,6 +161,18 @@ if (nrow(model_dual_BRCA) > 0) {
   dual_library <- input_dual$library
   CL_name <- input_dual$CL_name
   out_fold <- input_dual$out_fold
+  
+  # if NA is present, remove from dual_logFC and dual_library
+  id_rm <- dual_logFC %>% 
+    dplyr::filter(is.na(get(sprintf("%s_logFC", CL_name)))) %>%
+    dplyr::pull(ID_lib)
+  if (length(id_rm) > 0) {
+    print(sprintf("Removed %s guide pairs including NAs in logFC", length(id_rm)))
+    dual_logFC <- dual_logFC %>% 
+      dplyr::filter(!ID_lib %in% id_rm)
+    dual_library <- dual_library %>% 
+      dplyr::filter(!ID_lib %in% id_rm)
+  }
   
   if (any(CNA$CN_category == "Amp")) {
     CN_thr <- round(min(CNA$C[CNA$CN_category == "Amp"]))  

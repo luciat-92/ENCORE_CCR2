@@ -6,10 +6,10 @@
 #SBATCH --time=5:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=2
+#SBATCH --cpus-per-task=1
 #SBATCH --output=logs/batch_correction_%j.out.log
 #SBATCH --error=logs/batch_correction_%j.err.log
-#SBATCH --mem=40G
+#SBATCH --mem=50G
 
 ######################################################################################################################
 ### Set the environment
