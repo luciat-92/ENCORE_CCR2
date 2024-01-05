@@ -315,8 +315,8 @@
       "RemoteUsername": "luciat-92",
       "RemotePkgRef": "luciat-92/CRISPRcleanRatSquared",
       "RemoteRef": "HEAD",
-      "RemoteSha": "d33ca6207b6783af7a46530321d1ab27cf466a98",
-      "Hash": "60d0b5d331b7dde5825ffa172c90f753",
+      "RemoteSha": "2c328a160e44fc2da54e4fe1ca73bcbdfa3ca8f8",
+      "Hash": "b7598b169c9ac34c468894a6571905c9",
       "Requirements": [
         "CRISPRcleanR",
         "CVXR",

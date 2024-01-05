@@ -40,7 +40,12 @@ sbatch --array=1-32 scripts/2_ccr2_run.sh BATCH_CORRECTED cavg
 #### STEP 3:
 Summarize output across all cell lines and generate relevant plots.
 ```
-sbatch scripts/3_summarise_run.sh
+sbatch scripts/3_summarise_run.sh ORIGINAL c91
+sbatch scripts/3_summarise_run.sh ORIGINAL c92
+sbatch scripts/3_summarise_run.sh ORIGINAL cavg
+sbatch scripts/3_summarise_run.sh BATCH_CORRECTED c91
+sbatch scripts/3_summarise_run.sh BATCH_CORRECTED c92
+sbatch scripts/3_summarise_run.sh BATCH_CORRECTED cavg
 ```
 
 

@@ -1002,23 +1002,33 @@ plot_model_perf_vs_corr <- function(
   }
   
   # plot model performances
-  df_gene <- prepare_data(tissue = tissue_name, 
-                          model_perf = model_perf, 
-                          dual_FC_withCNA = dual_FC_withCNA, 
-                          single_FC_withCNA = single_FC_withCNA, 
-                          single_FC_gw = single_FC_gw,
-                          type = "DOUBLE_CUT_PAIR") %>%
-    mutate(diff_mean = mean_correction_single - mean_correction_dual) %>%
-    mutate(ratio_mean = mean_correction_dual/mean_correction_single) 
-  
-  df_nt <- prepare_data(tissue = tissue_name, 
+  df_gene <- list()
+  df_nt <- list()
+  for (i in 1:length(tissue_name)) {
+    
+    df_gene[[i]] <- prepare_data(tissue = tissue_name[i], 
+                            model_perf = model_perf, 
+                            dual_FC_withCNA = dual_FC_withCNA, 
+                            single_FC_withCNA = single_FC_withCNA, 
+                            single_FC_gw = single_FC_gw,
+                            type = "DOUBLE_CUT_PAIR") %>%
+      mutate(diff_mean = mean_correction_single - mean_correction_dual) %>%
+      mutate(ratio_mean = mean_correction_dual/mean_correction_single) %>%
+      mutate(tissue = tissue_name[i])
+    
+    df_nt[[i]] <- prepare_data(tissue = tissue_name[i], 
                           model_perf = model_perf, 
                           dual_FC_withCNA = dual_FC_withCNA, 
                           single_FC_withCNA = single_FC_withCNA, 
                           single_FC_gw = single_FC_gw,
                           type = "NONTARGET_PAIR") %>%
-    mutate(diff_mean = mean_correction_single - mean_correction_dual) %>%
-    mutate(ratio_mean = mean_correction_dual/mean_correction_single) 
+      mutate(diff_mean = mean_correction_single - mean_correction_dual) %>%
+      mutate(ratio_mean = mean_correction_dual/mean_correction_single) %>%
+      mutate(tissue = tissue_name[i])
+  }
+  df_gene <- do.call(rbind, df_gene)
+  df_nt <- do.call(rbind, df_nt)
+  
   
   plot_tmp <- function(df, df_nt, var_to_plot, ytitle, tissue_name){
     
@@ -1027,7 +1037,7 @@ plot_model_perf_vs_corr <- function(
                       y = get(var_to_plot))) + 
       geom_smooth(method = "lm", se = FALSE, color = "black", linetype = "dashed") + 
       stat_cor(method = "pearson") + 
-      geom_point(aes(color = perc_pair_amp), size = 2) +
+      geom_point(aes(color = perc_pair_amp, shape = tissue), size = 2) +
       theme_bw() + 
       ylab(ytitle) + 
       xlab("Mean model performance") +
@@ -1035,14 +1045,14 @@ plot_model_perf_vs_corr <- function(
             axis.title = element_text(size = 12)) +
       scale_colour_gradient2(low = "red", mid = "grey50",high = "red", name = "% of pairs amplified") + 
       # scale_size(name = "% of pairs amplified") + 
-      ggtitle(sprintf("NON-TARGET Pairs (%s)", tissue_name))
+      ggtitle(sprintf("NON-TARGET Pairs"))
     
     pl2 <- ggplot(df, 
                   aes(x = mean_corr, 
                       y = get(var_to_plot))) + 
       geom_smooth(method = "lm", se = FALSE, color = "black", linetype = "dashed") + 
       stat_cor(method = "pearson") + 
-      geom_point(aes(color = perc_pair_amp), size = 2) +
+      geom_point(aes(color = perc_pair_amp, shape = tissue), size = 2) +
       theme_bw() + 
       ylab(ytitle) + 
       xlab("Mean model performance") +
@@ -1050,7 +1060,7 @@ plot_model_perf_vs_corr <- function(
             axis.title = element_text(size = 12)) +
       scale_colour_gradient2(low = "red", mid = "grey50",high = "red", name = "% of pairs amplified") + 
       # scale_size(name = "% of pairs amplified") + 
-      ggtitle(sprintf("Double Gene Pairs (%s)", tissue_name))
+      ggtitle(sprintf("Double Gene Pairs"))
     
     pl <- ggarrange(plotlist = list(pl1, pl2), nrow = 1)
     
@@ -1072,12 +1082,12 @@ plot_model_perf_vs_corr <- function(
   print(pl2)
   
   if (saveToFig) {
-    file_name <- sprintf("%s%s_%s_model_perf_VS_mean_correction_dual.%s", 
-                         outdir, EXPname, tissue_name, saveFormat)
+    file_name <- sprintf("%s%s_model_perf_VS_mean_correction_dual.%s", 
+                         outdir, EXPname, saveFormat)
     ggsave(filename = file_name, plot = pl1, width = 10, height = 4)
     
-    file_name <- sprintf("%s%s_%s_model_perf_VS_mean_correction_single.%s", 
-                         outdir, EXPname, tissue_name, saveFormat)
+    file_name <- sprintf("%s%s_model_perf_VS_mean_correction_single.%s", 
+                         outdir, EXPname, saveFormat)
     ggsave(filename = file_name, plot = pl2, width = 10, height = 4)
   }
   

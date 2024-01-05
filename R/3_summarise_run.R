@@ -119,18 +119,7 @@ df_model_perf <- plot_model_perf_vs_corr(
   single_FC_withCNA = output$single_FC_withCNA,
   single_FC_gw = single_gw$single_FC,
   model_perf = output$model_perf,
-  tissue_name = "COLO",
-  saveToFig = TRUE, 
-  saveFormat = "png", 
-  EXPname = "ALL_CLs", 
-  outdir = sprintf("%s/ALL_CLs/", fold_output))
-
-df_model_perf <- plot_model_perf_vs_corr(
-  dual_FC_withCNA = output$dual_FC_withCNA,
-  single_FC_withCNA = output$single_FC_withCNA,
-  single_FC_gw = single_gw$single_FC,
-  model_perf = output$model_perf,
-  tissue_name = "BRCA",
+  tissue_name = c("COLO", "BRCA"),
   saveToFig = TRUE, 
   saveFormat = "png", 
   EXPname = "ALL_CLs", 
@@ -234,7 +223,7 @@ plot_CN_vs_logFC(dual_FC_withCNA = output$dual_FC_withCNA,
                  saveToFig = TRUE,
                  saveFormat = "png",
                  EXPname = "ALL_CLs",
-                 outdir = sprintf("%s/ALL_CLs/",  fold))
+                 outdir = sprintf("%s/ALL_CLs/",  fold_output))
 
 plot_CN_vs_logFC(dual_FC_withCNA = output$dual_FC_withCNA[grepl("COLO", output$dual_FC_withCNA$lib),],
                  saveToFig = TRUE,
