@@ -225,3 +225,51 @@ pl <- ggplot(model_tot,
 pl
 ggsave(filename = sprintf("%smodel_perf.pdf", fold_output), 
        plot = pl, width = 5.2, height = 5)
+
+# plot gene selection
+print("Differences in gene selection")
+file_original <- sprintf("%sselection_gene_letANDsyn.txt", fold_original)
+file_batchcorr <- sprintf("%sselection_gene_letANDsyn.txt", fold_batchcorr)
+
+sel_original <- readr::read_tsv(file_original) %>%
+  dplyr::mutate(preproc = "No Preprocessing")
+
+sel_batchcorr <- readr::read_tsv(file_batchcorr) %>%
+  dplyr::mutate(preproc = "ComBat Corrected")
+
+# tot
+sel_tot <- bind_rows(sel_original, sel_batchcorr) %>%
+  dplyr::mutate(type_new = case_when(common == "in common" ~ "in common", 
+                                     common == "unique" & type == "Uncorrected" ~ "unique (Uncorrected)", 
+                                     common == "unique" & type == "Corrected" ~ "unique (CCR^2 Corrected)")) %>%
+  dplyr::mutate(lib = factor(lib, levels = c("COLO", "BRCA")))
+
+pl <- ggplot(sel_tot, 
+             aes(x = type_new, fill = preproc)) +
+  geom_bar(position = position_dodge()) + 
+  facet_wrap(.~lib, ncol = 1) + 
+  theme_bw() + 
+  theme(legend.title = element_blank(), legend.position = "top") + 
+  coord_flip() + 
+  xlab("") + 
+  ylab("N. selected gene pairs across all CLs") 
+pl
+ggsave(filename = sprintf("%scount_selected_gene_pairs.pdf", fold_output), 
+       plot = pl, width = 5.2, height = 3)
+
+pl <- ggplot(sel_tot, 
+             aes(x = CL, fill = preproc)) +
+  geom_bar(position = position_dodge()) + 
+  facet_wrap(.~lib, ncol = 1, scales = "free_y") + 
+  theme_bw() + 
+  theme(legend.title = element_blank(), legend.position = "top") + 
+  coord_flip() + 
+  xlab("") + 
+  ylab("N. selected gene pairs across all CLs") 
+pl
+ggsave(filename = sprintf("%scount_selected_gene_pairs_perCLs.pdf", fold_output), 
+       plot = pl, width = 5.5, height = 5.5)
+
+
+
+
