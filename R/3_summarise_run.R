@@ -19,13 +19,11 @@ parser <- ArgumentParser(description = "Summarise results from CRISPRcleanR^2 fo
 parser$add_argument("--fold_input_dual", type = "character", help = "path to folder with preprocessed data from ENCORE")
 parser$add_argument("--fold_output", type = "character", help = "path to folder to save output")
 parser$add_argument("--fold_CN", type = "character", help = "path to folder with CN file")
-parser$add_argument("--root_path", type = "character", help = "base path, default is group-share", default = "/group/iorio/lucia/")
 
 args <- parser$parse_args()
 fold_input_dual <- args$fold_input_dual
 fold_output <- args$fold_output
 fold_CN <- args$fold_CN 
-root_path <- args$root_path
 
 source("R/3_auxilary_functions.R")
 

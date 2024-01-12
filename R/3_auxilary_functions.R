@@ -1091,6 +1091,14 @@ plot_model_perf_vs_corr <- function(
     ggsave(filename = file_name, plot = pl2, width = 10, height = 4)
   }
   
+  # save tables
+  write.table(x = df_gene, 
+              file = sprintf("%s%s_avg_model_perf_DoubleGenePairs.tsv", outdir, EXPname), 
+              quote = F, row.names = F, sep = "\t")
+  write.table(x = df_nt, 
+              file = sprintf("%s%s_avg_model_perf_NON-TARGETPairs.tsv", outdir, EXPname), 
+              quote = F, row.names = F, sep = "\t")
+  
   return(list(gene_pairs = df_gene, gene_nontarget = df_nt))
   
 }
