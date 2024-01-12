@@ -28,10 +28,10 @@ fold_CN <- args$fold_CN
 source("R/3_auxilary_functions.R")
 
 ###########################################
-# root_path <- "/group/iorio/lucia/"
-# fold_input_dual <- sprintf("%sCRISPR_combinatorial/data/encore/DATA_FREEZE_v4_NOV_2023/ORIGINAL/c91/", root_path)
-# fold_output <- sprintf("%sCRISPR_combinatorial/CRISPRcleanRatSquared/DATA_FREEZE_v4_NOV_2023/ORIGINAL/c91/", root_path)
-# fold_CN <- sprintf("%sdatasets/ENCORE_SAMPLES_COPYNUMBER/DATA_FREEZE_v4_NOV_2023/METADATA_FEB2023/COPY_NUMBER/NEW_COPY_NUMBER/", root_path)
+#root_path <- "/group/iorio/lucia/"
+#fold_input_dual <- sprintf("%sCRISPR_combinatorial/data/encore/DATA_FREEZE_v4_NOV_2023/ORIGINAL/c91/", root_path)
+#fold_output <- sprintf("%sCRISPR_combinatorial/CRISPRcleanRatSquared/DATA_FREEZE_v4_NOV_2023/ORIGINAL/c91/", root_path)
+#fold_CN <- sprintf("%sdatasets/ENCORE_SAMPLES_COPYNUMBER/DATA_FREEZE_v4_NOV_2023/METADATA_FEB2023/COPY_NUMBER/NEW_COPY_NUMBER/", root_path)
 ###########################################
 
 ##################################
@@ -42,7 +42,7 @@ model_encore_table <- read_tsv(sprintf("%smodel_list.tsv", fold_input_dual),
                                show_col_types = FALSE) %>%
   dplyr::mutate(model_name_CMP_lib = paste(model_name_CMP, lib, sep = "_")) %>%
   dplyr::distinct(model_name_CMP_lib, .keep_all = TRUE) %>%
-  dplyr::select(model_name_CMP_lib, model_name_CMP, lib, model_id_CMP)
+  dplyr::select(model_name_CMP_lib, model_name_CMP, lib, model_id_CMP, BROAD_ID)
 
 output <- get_all_CLs(
   model_encore_table = model_encore_table, 
@@ -60,6 +60,16 @@ write.table(
 gzip(sprintf("%s/ALL_CLs/logFC_sgRNA_CCR2correction.txt", fold_output), 
      overwrite = TRUE) # compress
 
+# save gene selection
+write.table(
+  output$selection_gene_letANDsyn, 
+  file = sprintf("%s/ALL_CLs/selection_gene_letANDsyn.txt",  fold_output), 
+  quote = F, 
+  sep = "\t", 
+  row.names = F, 
+  col.names = T
+)
+
 # load genome-wide single
 single_gw <- get_all_CLs_singleGW(
   model_encore_table = model_encore_table, 
@@ -67,6 +77,46 @@ single_gw <- get_all_CLs_singleGW(
 )
 
 gc();gc();gc()
+
+# ## TEST, use CN ##
+# #### CN from depmap, log(CN + 1) based on ploidy
+# logCN <- read_csv(file = "/group/iorio/lucia/datasets/DEPMAP_PORTAL/version_23Q4/OmicsCNGene.csv")
+# colnames(logCN)[1] <- "BROAD_ID"
+# logCN <- logCN[logCN$BROAD_ID %in% model_encore_table$BROAD_ID, ]
+# # change gene names
+# gene_names <- colnames(logCN)[-1]
+# gene_names_hugo <- str_split_i(gene_names, pattern = "[ (]", i = 1)
+# logCN_mat <- t(logCN[, -1])
+# rownames(logCN_mat) <- gene_names_hugo
+# colnames(logCN_mat) <- model_encore_table$model_name_CMP[match(logCN$BROAD_ID, model_encore_table$BROAD_ID)]
+# 
+# # match the output with logCN:
+# dual_FC = output$dual_FC[output$dual_FC$CL_lib == "HT-29_COLO", ]
+# 
+# dual_FC_CNc <- dual_FC
+# dual_FC_CNc$Gene1_CNc <- unname(logCN_mat[match(dual_FC_CNc$Gene1, rownames(logCN_mat)), unique(dual_FC$CL)])
+# dual_FC_CNc$Gene2_CNc <- unname(logCN_mat[match(dual_FC_CNc$Gene2, rownames(logCN_mat)), unique(dual_FC$CL)])
+# dual_FC_CNc$Sum_CNc <- dual_FC_CNc$Gene1_CNc + dual_FC_CNc$Gene2_CNc
+# dual_FC_CNc$Prod_CNc <- dual_FC_CNc$Gene1_CNc * dual_FC_CNc$Gene2_CNc
+# # remove NA
+# dual_FC_CNc <- dual_FC_CNc[!is.na(dual_FC_CNc$Prod_CNc), ]
+# tmp <- dual_FC_CNc[!dual_FC_CNc$Gene2 %in% "MYC",]
+# 
+# pl1 <- ggplot(tmp, aes(x = Sum_CNc, y = avgFC)) +
+#   geom_point(size = 0.5) + 
+#   stat_smooth() + 
+#   theme_bw()
+# pl2 <- ggplot(tmp, aes(x = Sum_CNc, y = correctedFC)) +
+#   geom_point(size = 0.5) + 
+#   stat_smooth() + 
+#   theme_bw()
+# ggarrange(plotlist = list(pl1, pl2), nrow = 2)
+# cor(tmp$Gene2_CNc, tmp$avgFC)
+# cor(tmp$Gene2_CNc, tmp$correctedFC)
+# ###
+
+
+#####
 
 ####### plots #######
 # Robject_ess <- "CRISPR_combinatorial/data/FiPer_outputs.RData" # from https://github.com/DepMap-Analytics/CoRe/blob/master/notebooks/data/preComputed/
