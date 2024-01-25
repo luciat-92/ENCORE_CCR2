@@ -1129,6 +1129,16 @@
         "zlibbioc"
       ]
     },
+    "VennDiagram": {
+      "Package": "VennDiagram",
+      "Version": "1.7.3",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "6b628f0aee185fdb5d6ce2b5eb477e52",
+      "Requirements": [
+        "futile.logger"
+      ]
+    },
     "XML": {
       "Package": "XML",
       "Version": "3.99-0.9",

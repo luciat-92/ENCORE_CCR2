@@ -48,4 +48,13 @@ sbatch scripts/3_summarise_run.sh BATCH_CORRECTED c92
 sbatch scripts/3_summarise_run.sh BATCH_CORRECTED cavg
 ```
 
+#### STEP 4:
+Investigate results: ComBat batch correction VS Original; comparison cavg, c91, c92
+```
+sbatch scripts/4a_validate_batch_correction_run.sh c91
+sbatch scripts/4a_validate_batch_correction_run.sh c92
+sbatch scripts/4a_validate_batch_correction_run.sh cavg
 
+sbatch scripts/4b_compare_cas9_norm_run.sh ORIGINAL
+sbatch scripts/4b_compare_cas9_norm_run.sh BATCH_CORRECTED
+```
