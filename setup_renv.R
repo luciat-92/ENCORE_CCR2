@@ -11,14 +11,18 @@ renv::init(
 renv::activate()
 
 #### INSTALL ####
+options(repos = BiocManager::repositories())
 renv::install("devtools")
 renv::install("tidyverse")
 renv::install("pak")
 renv::install("argparse")
 renv::install("pheatmap")
 renv::install("R.utils")
+renv::install("effectsize")
+# biocoductor
+renv::install("bioc::Biobase")
+renv::install("sva")
 
-### IMPORTANT: if not working properly, specify in installation: repos = "https://cran.mirror.garr.it/CRAN/"
 # add github credential PAT (only needed if repo is not public)
 library(devtools)
 library(pak)

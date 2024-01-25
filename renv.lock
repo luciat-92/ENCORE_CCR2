@@ -3,6 +3,26 @@
     "Version": "4.1.0",
     "Repositories": [
       {
+        "Name": "BioCsoft",
+        "URL": "https://rstudio-pm.fht.org/fht-bioconductor/packages/3.14/bioc"
+      },
+      {
+        "Name": "BioCann",
+        "URL": "https://rstudio-pm.fht.org/fht-bioconductor/packages/3.14/data/annotation"
+      },
+      {
+        "Name": "BioCexp",
+        "URL": "https://rstudio-pm.fht.org/fht-bioconductor/packages/3.14/data/experiment"
+      },
+      {
+        "Name": "BioCworkflows",
+        "URL": "https://rstudio-pm.fht.org/fht-bioconductor/packages/3.14/workflows"
+      },
+      {
+        "Name": "BioCbooks",
+        "URL": "https://rstudio-pm.fht.org/fht-bioconductor/packages/3.14/books"
+      },
+      {
         "Name": "CRAN",
         "URL": "https://rstudio-pm.fht.org/fht-cran/2022-04-27"
       }
@@ -102,13 +122,8 @@
     "Biobase": {
       "Package": "Biobase",
       "Version": "2.54.0",
-      "Source": "CRAN",
-      "RemoteType": "standard",
-      "RemotePkgRef": "Biobase",
-      "RemoteRef": "Biobase",
-      "RemoteRepos": "https://bioconductor.org/packages/3.14/bioc",
-      "RemotePkgPlatform": "source",
-      "RemoteSha": "2.54.0",
+      "Source": "Repository",
+      "Repository": "RSPM",
       "git_url": "https://git.bioconductor.org/packages/Biobase",
       "git_branch": "RELEASE_3_14",
       "git_last_commit": "8215d76",
@@ -300,8 +315,8 @@
       "RemoteUsername": "luciat-92",
       "RemotePkgRef": "luciat-92/CRISPRcleanRatSquared",
       "RemoteRef": "HEAD",
-      "RemoteSha": "8439c6d212eabfd8392c03b6b302f08afad7baf1",
-      "Hash": "fc3c153a542e9f0662d8fe0491fa6612",
+      "RemoteSha": "2c328a160e44fc2da54e4fe1ca73bcbdfa3ca8f8",
+      "Hash": "b7598b169c9ac34c468894a6571905c9",
       "Requirements": [
         "CRISPRcleanR",
         "CVXR",
@@ -1114,6 +1129,16 @@
         "zlibbioc"
       ]
     },
+    "VennDiagram": {
+      "Package": "VennDiagram",
+      "Version": "1.7.3",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "6b628f0aee185fdb5d6ce2b5eb477e52",
+      "Requirements": [
+        "futile.logger"
+      ]
+    },
     "XML": {
       "Package": "XML",
       "Version": "3.99-0.9",
@@ -1163,6 +1188,26 @@
       "RemoteSha": "1.4-5",
       "Hash": "4f57884290cc75ab22f4af9e9d4ca862",
       "Requirements": []
+    },
+    "annotate": {
+      "Package": "annotate",
+      "Version": "1.72.0",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "git_url": "https://git.bioconductor.org/packages/annotate",
+      "git_branch": "RELEASE_3_14",
+      "git_last_commit": "67ac76a",
+      "git_last_commit_date": "2021-10-26",
+      "Hash": "885c32b60eab51236e4afe8921049ff1",
+      "Requirements": [
+        "AnnotationDbi",
+        "Biobase",
+        "BiocGenerics",
+        "DBI",
+        "XML",
+        "httr",
+        "xtable"
+      ]
     },
     "argparse": {
       "Package": "argparse",
@@ -1215,6 +1260,17 @@
       "Repository": "RSPM",
       "Hash": "543776ae6848fde2f48ff3816d0628bc",
       "Requirements": []
+    },
+    "bayestestR": {
+      "Package": "bayestestR",
+      "Version": "0.11.5",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "a1ac15e988cbeea3524f1f371ad13964",
+      "Requirements": [
+        "datawizard",
+        "insight"
+      ]
     },
     "biomaRt": {
       "Package": "biomaRt",
@@ -1644,6 +1700,16 @@
       "Hash": "aecef50008ea7b57c76f1cb5c127fb02",
       "Requirements": []
     },
+    "datawizard": {
+      "Package": "datawizard",
+      "Version": "0.4.0",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "80574954d62f0764830aa79144e82344",
+      "Requirements": [
+        "insight"
+      ]
+    },
     "dbplyr": {
       "Package": "dbplyr",
       "Version": "2.1.1",
@@ -1789,6 +1855,36 @@
         "tibble",
         "tidyselect",
         "vctrs"
+      ]
+    },
+    "edgeR": {
+      "Package": "edgeR",
+      "Version": "3.36.0",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "git_url": "https://git.bioconductor.org/packages/edgeR",
+      "git_branch": "RELEASE_3_14",
+      "git_last_commit": "c7db03a",
+      "git_last_commit_date": "2021-10-26",
+      "Hash": "670b85ad64219de76ff7e539a41b58a6",
+      "Requirements": [
+        "Rcpp",
+        "limma",
+        "locfit"
+      ]
+    },
+    "effectsize": {
+      "Package": "effectsize",
+      "Version": "0.6.0.1",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "c967cd78459926f2e5a969696e736b34",
+      "Requirements": [
+        "bayestestR",
+        "datawizard",
+        "insight",
+        "parameters",
+        "performance"
       ]
     },
     "ellipsis": {
@@ -2002,6 +2098,24 @@
         "rlang",
         "rstudioapi",
         "withr"
+      ]
+    },
+    "genefilter": {
+      "Package": "genefilter",
+      "Version": "1.76.0",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "git_url": "https://git.bioconductor.org/packages/genefilter",
+      "git_branch": "RELEASE_3_14",
+      "git_last_commit": "8d630fd",
+      "git_last_commit_date": "2021-10-26",
+      "Hash": "0ef8e3dec95ba3b7499e8758a2415619",
+      "Requirements": [
+        "AnnotationDbi",
+        "Biobase",
+        "BiocGenerics",
+        "annotate",
+        "survival"
       ]
     },
     "generics": {
@@ -2448,6 +2562,14 @@
       "Hash": "6154ec2223172bce8162d4153cda21f7",
       "Requirements": []
     },
+    "insight": {
+      "Package": "insight",
+      "Version": "0.17.0",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "1d3b65d1cb9ee56a3df596e2012e0fb2",
+      "Requirements": []
+    },
     "isoband": {
       "Package": "isoband",
       "Version": "0.2.5",
@@ -2608,6 +2730,18 @@
         "rlang"
       ]
     },
+    "limma": {
+      "Package": "limma",
+      "Version": "3.50.3",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "git_url": "https://git.bioconductor.org/packages/limma",
+      "git_branch": "RELEASE_3_14",
+      "git_last_commit": "724632d",
+      "git_last_commit_date": "2022-04-06",
+      "Hash": "b7308f398f87cb720d86a7992af92f6f",
+      "Requirements": []
+    },
     "lme4": {
       "Package": "lme4",
       "Version": "1.1-29",
@@ -2630,6 +2764,16 @@
         "minqa",
         "nlme",
         "nloptr"
+      ]
+    },
+    "locfit": {
+      "Package": "locfit",
+      "Version": "1.5-9.5",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "ab000f1b849b9378c2b51487c70fe93c",
+      "Requirements": [
+        "lattice"
       ]
     },
     "lubridate": {
@@ -2880,6 +3024,18 @@
       "Hash": "a39d952e8d1f652b6f31469a73efce39",
       "Requirements": []
     },
+    "parameters": {
+      "Package": "parameters",
+      "Version": "0.17.0",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "f226a06220ee5a17360aa9cc7790fa1b",
+      "Requirements": [
+        "bayestestR",
+        "datawizard",
+        "insight"
+      ]
+    },
     "pbkrtest": {
       "Package": "pbkrtest",
       "Version": "0.5.1",
@@ -2901,6 +3057,18 @@
         "lme4",
         "magrittr",
         "numDeriv"
+      ]
+    },
+    "performance": {
+      "Package": "performance",
+      "Version": "0.9.0",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "32cae2f2159734e18e2e03ff20652656",
+      "Requirements": [
+        "bayestestR",
+        "datawizard",
+        "insight"
       ]
     },
     "pheatmap": {
@@ -3675,6 +3843,25 @@
       "Hash": "f6189c70451d3d68e0d571235576e833",
       "Requirements": [
         "Matrix"
+      ]
+    },
+    "sva": {
+      "Package": "sva",
+      "Version": "3.42.0",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "git_url": "https://git.bioconductor.org/packages/sva",
+      "git_branch": "RELEASE_3_14",
+      "git_last_commit": "54c843c",
+      "git_last_commit_date": "2021-10-26",
+      "Hash": "019857c085512ad7d4bf640d23286468",
+      "Requirements": [
+        "BiocParallel",
+        "edgeR",
+        "genefilter",
+        "limma",
+        "matrixStats",
+        "mgcv"
       ]
     },
     "sys": {

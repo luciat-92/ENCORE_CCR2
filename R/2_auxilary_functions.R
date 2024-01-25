@@ -2,30 +2,32 @@
 create_input_list <- function(model_dual,
                               model_single,
                               tissue, 
-                              input_fold, 
+                              fold_input_dual, 
+                              fold_input_single,
+                              fold_output,
                               copy_number_file){
   
   CL_name <- model_dual$model_name_CMP
   # get dual
   if (length(CL_name) > 1) {stop("Only one value per cell line is permitted")}
   
-  result_file <- sprintf("BATCH_CORRECTED/%s_FINAL_EXACT_logFC_sgRNA_ComBatCorrectionLIBs.txt", tissue)
+  result_file <- sprintf("%s_FINAL_EXACT_logFC_sgRNA.txt", tissue)
   names(result_file) <- "result_file"
   if (tissue == "COLO") {
-    library_file <- sprintf("BATCH_CORRECTED/ENCORE_GI_COREAD_Library_ALL.txt")
+    library_file <- sprintf("../ENCORE_GI_COREAD_Library_ALL.txt")
   }
   if (tissue == "BRCA") {
-    library_file <- sprintf("BATCH_CORRECTED/ENCORE_GI_BRCA_Library_ALL.txt")
+    library_file <- sprintf("../ENCORE_GI_BRCA_Library_ALL.txt")
   }
   names(library_file) <- "library_file"
   
-  out_fold <- sprintf("%sCRISPR_combinatorial/CRISPRcleanRatSquared/DATA_FREEZE_v4/%s/", root_path, CL_name)
+  out_fold <- sprintf("%s%s/", fold_output, CL_name)
   names(out_fold) <- "out_fold"
-  names(input_fold) <- "input_fold"
+  names(fold_input_dual) <- "input_fold"
   names(copy_number_file) <- "copy_number_file"
   names(CL_name) <- "CL_name"
   
-  dual_input <- as.list(c(input_fold, 
+  dual_input <- as.list(c(fold_input_dual, 
                           copy_number_file, 
                           result_file, 
                           library_file, 
@@ -42,7 +44,7 @@ create_input_list <- function(model_dual,
     
     library_file <- sprintf("%sCRISPR_libraries/data/KY_Library_%s_hg38.RData", root_path, tolower(tmp$library))
     names(library_file) <- "library_file"
-    count_file <- sprintf("%sdatasets/PROJECT_SCORE/SINGLE_CL/%s_counts.tsv", root_path, tmp$model_name_CMP_library)
+    count_file <- sprintf("%s/%s_counts.tsv", fold_input_single, tmp$model_name_CMP_library)
     names(count_file) <- "count_file"
     names(CL_name) <- "CL_name"
     single_input <- as.list(c(count_file, 
