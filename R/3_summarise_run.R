@@ -1,3 +1,8 @@
+# Apply systematically across all CLs
+library(renv)
+renv::activate()
+print(.libPaths())
+
 # Combine all results across cell lines
 library(CRISPRcleanRatSquared)
 library(CRISPRcleanR)
@@ -7,47 +12,113 @@ library(ggpubr)
 library(pheatmap)
 library(reshape2)
 library(R.utils)
+library(argparse)
+pdf(NULL) # avoid Rplots.pdf from being generated
+
+parser <- ArgumentParser(description = "Summarise results from CRISPRcleanR^2 for all CLs")
+parser$add_argument("--fold_input_dual", type = "character", help = "path to folder with preprocessed data from ENCORE")
+parser$add_argument("--fold_output", type = "character", help = "path to folder to save output")
+parser$add_argument("--fold_CN", type = "character", help = "path to folder with CN file")
+
+args <- parser$parse_args()
+fold_input_dual <- args$fold_input_dual
+fold_output <- args$fold_output
+fold_CN <- args$fold_CN 
 
 source("R/3_auxilary_functions.R")
-root_path <- "/group/iorio/lucia/"
+
+###########################################
+#root_path <- "/group/iorio/lucia/"
+#fold_input_dual <- sprintf("%sCRISPR_combinatorial/data/encore/DATA_FREEZE_v4_NOV_2023/ORIGINAL/c91/", root_path)
+#fold_output <- sprintf("%sCRISPR_combinatorial/CRISPRcleanRatSquared/DATA_FREEZE_v4_NOV_2023/ORIGINAL/c91/", root_path)
+#fold_CN <- sprintf("%sdatasets/ENCORE_SAMPLES_COPYNUMBER/DATA_FREEZE_v4_NOV_2023/METADATA_FEB2023/COPY_NUMBER/NEW_COPY_NUMBER/", root_path)
+###########################################
 
 ##################################
-fold <- sprintf("%sCRISPR_combinatorial/CRISPRcleanRatSquared/DATA_FREEZE_v4/", root_path)
-copy_number_file <- sprintf("%sdatasets/ENCORE_SAMPLES_COPYNUMBER/DATA_FREEZE_v4/METADATA_FEB2023/COPY_NUMBER/NEW_COPY_NUMBER/MERGED_SEGMENT_COPYNUMBER.txt", root_path)
+copy_number_file <- sprintf("%sMERGED_SEGMENT_COPYNUMBER.txt", fold_CN)
+system(sprintf("mkdir -p %s/ALL_CLs/",  fold_output))
 
-input_encore_fold <- sprintf("%sdatasets/ENCORE_SAMPLES_COPYNUMBER/DATA_FREEZE_v4/BATCH_CORRECTED/", root_path)
-model_encore_table <- read_tsv(sprintf("%smodel_list.tsv", input_encore_fold), 
+model_encore_table <- read_tsv(sprintf("%smodel_list.tsv", fold_input_dual), 
                                show_col_types = FALSE) %>%
   dplyr::mutate(model_name_CMP_lib = paste(model_name_CMP, lib, sep = "_")) %>%
   dplyr::distinct(model_name_CMP_lib, .keep_all = TRUE) %>%
-  dplyr::select(model_name_CMP_lib, model_name_CMP, lib, model_id_CMP)
+  dplyr::select(model_name_CMP_lib, model_name_CMP, lib, model_id_CMP, BROAD_ID)
 
 output <- get_all_CLs(
   model_encore_table = model_encore_table, 
-  fold = fold, 
+  fold = fold_output, 
   copy_number_file = copy_number_file)
 # save
-save(output, file = sprintf("%s/ALL_CLs/complete_output.RData",  fold))
+# save(output, file = sprintf("%s/ALL_CLs/complete_output.RData",  fold_output))
 write.table(
   output$dual_FC, 
-  file = sprintf("%s/ALL_CLs/logFC_sgRNA_ComBatCorrectionLIBs_CCR2correction.txt",  fold), 
+  file = sprintf("%s/ALL_CLs/logFC_sgRNA_CCR2correction.txt",  fold_output), 
   quote = F, 
   sep = "\t", 
   row.names = F, 
   col.names = T)
-gzip(sprintf("%s/ALL_CLs/logFC_sgRNA_ComBatCorrectionLIBs_CCR2correction.txt",  fold), 
+gzip(sprintf("%s/ALL_CLs/logFC_sgRNA_CCR2correction.txt", fold_output), 
      overwrite = TRUE) # compress
+
+# save gene selection
+write.table(
+  output$selection_gene_letANDsyn, 
+  file = sprintf("%s/ALL_CLs/selection_gene_letANDsyn.txt",  fold_output), 
+  quote = F, 
+  sep = "\t", 
+  row.names = F, 
+  col.names = T
+)
 
 # load genome-wide single
 single_gw <- get_all_CLs_singleGW(
   model_encore_table = model_encore_table, 
-  fold = fold
+  fold = fold_output
 )
 
 gc();gc();gc()
 
+# ## TEST, use CN ##
+# #### CN from depmap, log(CN + 1) based on ploidy
+# logCN <- read_csv(file = "/group/iorio/lucia/datasets/DEPMAP_PORTAL/version_23Q4/OmicsCNGene.csv")
+# colnames(logCN)[1] <- "BROAD_ID"
+# logCN <- logCN[logCN$BROAD_ID %in% model_encore_table$BROAD_ID, ]
+# # change gene names
+# gene_names <- colnames(logCN)[-1]
+# gene_names_hugo <- str_split_i(gene_names, pattern = "[ (]", i = 1)
+# logCN_mat <- t(logCN[, -1])
+# rownames(logCN_mat) <- gene_names_hugo
+# colnames(logCN_mat) <- model_encore_table$model_name_CMP[match(logCN$BROAD_ID, model_encore_table$BROAD_ID)]
+# 
+# # match the output with logCN:
+# dual_FC = output$dual_FC[output$dual_FC$CL_lib == "HT-29_COLO", ]
+# 
+# dual_FC_CNc <- dual_FC
+# dual_FC_CNc$Gene1_CNc <- unname(logCN_mat[match(dual_FC_CNc$Gene1, rownames(logCN_mat)), unique(dual_FC$CL)])
+# dual_FC_CNc$Gene2_CNc <- unname(logCN_mat[match(dual_FC_CNc$Gene2, rownames(logCN_mat)), unique(dual_FC$CL)])
+# dual_FC_CNc$Sum_CNc <- dual_FC_CNc$Gene1_CNc + dual_FC_CNc$Gene2_CNc
+# dual_FC_CNc$Prod_CNc <- dual_FC_CNc$Gene1_CNc * dual_FC_CNc$Gene2_CNc
+# # remove NA
+# dual_FC_CNc <- dual_FC_CNc[!is.na(dual_FC_CNc$Prod_CNc), ]
+# tmp <- dual_FC_CNc[!dual_FC_CNc$Gene2 %in% "MYC",]
+# 
+# pl1 <- ggplot(tmp, aes(x = Sum_CNc, y = avgFC)) +
+#   geom_point(size = 0.5) + 
+#   stat_smooth() + 
+#   theme_bw()
+# pl2 <- ggplot(tmp, aes(x = Sum_CNc, y = correctedFC)) +
+#   geom_point(size = 0.5) + 
+#   stat_smooth() + 
+#   theme_bw()
+# ggarrange(plotlist = list(pl1, pl2), nrow = 2)
+# cor(tmp$Gene2_CNc, tmp$avgFC)
+# cor(tmp$Gene2_CNc, tmp$correctedFC)
+# ###
+
+
+#####
+
 ####### plots #######
-system(sprintf("mkdir -p %s/ALL_CLs/",  fold))
 # Robject_ess <- "CRISPR_combinatorial/data/FiPer_outputs.RData" # from https://github.com/DepMap-Analytics/CoRe/blob/master/notebooks/data/preComputed/
 # load(Robject_ess) # essential genes from FiPer method
 # FiPer_essential <- Perc_AUC
@@ -55,12 +126,12 @@ data("ADaM2021_essential")
 essential_genes <- ADaM2021_essential
 
 ##### plot model performances #####
-# plot min thr and max thr
-thr_correction <- output$thr_correction
-plot(thr_correction$min_thr, thr_correction$min_correction, pch = 20)
-abline(a = 0, b = 1)
-plot(thr_correction$max_thr, thr_correction$max_correction, pch = 20)
-abline(a = 0, b = 1)
+## plot min thr and max thr
+#thr_correction <- output$thr_correction
+#plot(thr_correction$min_thr, thr_correction$min_correction, pch = 20)
+#abline(a = 0, b = 1)
+#plot(thr_correction$max_thr, thr_correction$max_correction, pch = 20)
+#abline(a = 0, b = 1)
 
 # plot model est p-values:
 df_model_est <- output$model_est %>%
@@ -80,7 +151,7 @@ pl <- ggplot(df_model_est, aes(x = CL_lib, fill = position, y = log10P)) +
   xlab("") +
   ylab("-log10(p-value)")
 pl
-ggsave(pl, filename = sprintf("%s/ALL_CLs/model_estimates_pvalue.png",  fold), width = 7, height = 5)
+ggsave(pl, filename = sprintf("%s/ALL_CLs/model_estimates_pvalue.png",  fold_output), width = 7, height = 5)
 
 
 # split per CL
@@ -88,7 +159,7 @@ plot_model_perf(model_perf = output$model_perf,
                 saveToFig = TRUE, 
                 saveFormat = "png", 
                 EXPname = "ALL_CLs", 
-                outdir = sprintf("%s/ALL_CLs/",  fold))
+                outdir = sprintf("%s/ALL_CLs/",  fold_output))
 
 # find relationship with model performance
 df_model_perf <- plot_model_perf_vs_corr(
@@ -96,22 +167,11 @@ df_model_perf <- plot_model_perf_vs_corr(
   single_FC_withCNA = output$single_FC_withCNA,
   single_FC_gw = single_gw$single_FC,
   model_perf = output$model_perf,
-  tissue_name = "COLO",
+  tissue_name = c("COLO", "BRCA"),
   saveToFig = TRUE, 
   saveFormat = "png", 
   EXPname = "ALL_CLs", 
-  outdir = sprintf("%s/ALL_CLs/", fold))
-
-df_model_perf <- plot_model_perf_vs_corr(
-  dual_FC_withCNA = output$dual_FC_withCNA,
-  single_FC_withCNA = output$single_FC_withCNA,
-  single_FC_gw = single_gw$single_FC,
-  model_perf = output$model_perf,
-  tissue_name = "BRCA",
-  saveToFig = TRUE, 
-  saveFormat = "png", 
-  EXPname = "ALL_CLs", 
-  outdir = sprintf("%s/ALL_CLs/", fold))
+  outdir = sprintf("%s/ALL_CLs/", fold_output))
 
 ### summary ###
 model_encore_table <- model_encore_table %>% arrange(lib)
@@ -134,7 +194,7 @@ save_pheatmap_png <- function(x, filename, width=7, height=7) {
   dev.off()
 }
 save_pheatmap_png(CL_summary,
-                  sprintf("%s/ALL_CLs/CL_library_summary.png",  fold),
+                  sprintf("%s/ALL_CLs/CL_library_summary.png",  fold_output),
                   width = 2.5,
                   height = 5.5)
 
@@ -162,7 +222,7 @@ pl <- ggplot(info_libraries, aes(x = lib, fill = tissue)) +
   xlab("") +
   ylab("N. of guide pairs")
 pl
-ggsave(pl, filename = sprintf("%s/ALL_CLs/count_guide_pairs_lib.png",  fold), width = 3, height = 3)
+ggsave(pl, filename = sprintf("%s/ALL_CLs/count_guide_pairs_lib.png",  fold_output), width = 3, height = 3)
 
 gene_info_libraries <- info_libraries %>%
   group_by(lib) %>%
@@ -178,7 +238,7 @@ pl <- ggplot(gene_info_libraries, aes(x = lib, fill = tissue)) +
   xlab("") +
   ylab("N. of gene pairs")
 pl
-ggsave(pl, filename = sprintf("%s/ALL_CLs/count_gene_pairs_lib.png",  fold), width = 3, height = 3)
+ggsave(pl, filename = sprintf("%s/ALL_CLs/count_gene_pairs_lib.png",  fold_output), width = 3, height = 3)
 
 gene1_all_info_libraries <- info_libraries %>%
   group_by(tissue) %>%
@@ -203,7 +263,7 @@ pl <- ggplot(genepos_all_info_library, aes(x = tissue, fill = tissue)) +
   xlab("") +
   ylab("N. of unique genes")
 pl
-ggsave(pl, filename = sprintf("%s/ALL_CLs/count_genes_tissue.png",  fold), width = 3, height = 3)
+ggsave(pl, filename = sprintf("%s/ALL_CLs/count_genes_tissue.png",  fold_output), width = 3, height = 3)
 
 ####
 # plot copy number from before correction logFC
@@ -211,26 +271,26 @@ plot_CN_vs_logFC(dual_FC_withCNA = output$dual_FC_withCNA,
                  saveToFig = TRUE,
                  saveFormat = "png",
                  EXPname = "ALL_CLs",
-                 outdir = sprintf("%s/ALL_CLs/",  fold))
+                 outdir = sprintf("%s/ALL_CLs/",  fold_output))
 
 plot_CN_vs_logFC(dual_FC_withCNA = output$dual_FC_withCNA[grepl("COLO", output$dual_FC_withCNA$lib),],
                  saveToFig = TRUE,
                  saveFormat = "png",
                  EXPname = "ALL_CLs",
-                 outdir = sprintf("%s/ALL_CLs/COLO_",  fold))
+                 outdir = sprintf("%s/ALL_CLs/COLO_",  fold_output))
 
 plot_CN_vs_logFC(dual_FC_withCNA = output$dual_FC_withCNA[grepl("BRCA", output$dual_FC_withCNA$lib),],
                  saveToFig = TRUE,
                  saveFormat = "png",
                  EXPname = "ALL_CLs",
-                 outdir = sprintf("%s/ALL_CLs/BRCA_",  fold))
+                 outdir = sprintf("%s/ALL_CLs/BRCA_",  fold_output))
 
 # plot number of pairs with Gene1 or Gene2 Amp per cell line
 plot_count_amp(dual_FC_withCNA = output$dual_FC_withCNA,
                saveToFig = TRUE,
                saveFormat = "png",
                EXPname = "ALL_CLs",
-               outdir = sprintf("%s/ALL_CLs/",  fold))
+               outdir = sprintf("%s/ALL_CLs/",  fold_output))
 
 # count number of pairs
 plotCNA_count(dual_FC_withCNA = output$dual_FC_withCNA,
@@ -238,48 +298,48 @@ plotCNA_count(dual_FC_withCNA = output$dual_FC_withCNA,
               saveToFig = TRUE,
               saveFormat = "png",
               essential_genes = essential_genes,
-              outdir = sprintf("%s/ALL_CLs/",  fold))
+              outdir = sprintf("%s/ALL_CLs/",  fold_output))
 
 plotCNA_count(dual_FC_withCNA = output$dual_FC_withCNA[grepl("COLO", output$dual_FC_withCNA$lib),],
               EXPname = "ALL_CLs",
               saveToFig = TRUE,
               saveFormat = "png",
               essential_genes = essential_genes,
-              outdir = sprintf("%s/ALL_CLs/COLO_",  fold))
+              outdir = sprintf("%s/ALL_CLs/COLO_",  fold_output))
 
 plotCNA_count(dual_FC_withCNA = output$dual_FC_withCNA[grepl("BRCA", output$dual_FC_withCNA$lib),],
               EXPname = "ALL_CLs",
               saveToFig = TRUE,
               saveFormat = "png",
               essential_genes = essential_genes,
-              outdir = sprintf("%s/ALL_CLs/BRCA_",  fold))
+              outdir = sprintf("%s/ALL_CLs/BRCA_",  fold_output))
 
 ###### plot CN all #####
 plotCNA(dual_FC_withCNA = output$dual_FC_withCNA, 
         EXPname = "ALL_CLs", 
         saveToFig = TRUE, 
         saveFormat = "png", 
-        outdir = sprintf("%s/ALL_CLs/",  fold))
+        outdir = sprintf("%s/ALL_CLs/",  fold_output))
 
 plotCNA_diff(dual_FC_withCNA = output$dual_FC_withCNA, 
              EXPname = "ALL_CLs", 
              saveToFig = TRUE, 
              saveFormat = "png", 
-             outdir = sprintf("%s/ALL_CLs/",  fold))
+             outdir = sprintf("%s/ALL_CLs/",  fold_output))
 
 plotCNA(dual_FC_withCNA = output$dual_FC_withCNA, 
         EXPname = "ALL_CLs", 
         essential_genes = essential_genes,
         saveToFig = TRUE, 
         saveFormat = "png", 
-        outdir = sprintf("%s/ALL_CLs/",  fold))
+        outdir = sprintf("%s/ALL_CLs/",  fold_output))
 
 plotCNA_diff(dual_FC_withCNA = output$dual_FC_withCNA, 
         EXPname = "ALL_CLs", 
         essential_genes = essential_genes,
         saveToFig = TRUE, 
         saveFormat = "png", 
-        outdir = sprintf("%s/ALL_CLs/",  fold))
+        outdir = sprintf("%s/ALL_CLs/",  fold_output))
 
 plotCNA(dual_FC_withCNA = output$dual_FC_withCNA,
         EXPname = "ALL_CLs", 
@@ -287,7 +347,7 @@ plotCNA(dual_FC_withCNA = output$dual_FC_withCNA,
         exclude_ess = FALSE, 
         saveToFig = TRUE, 
         saveFormat = "png", 
-        outdir = sprintf("%s/ALL_CLs/",  fold))
+        outdir = sprintf("%s/ALL_CLs/",  fold_output))
 
 plotCNA_diff(dual_FC_withCNA = output$dual_FC_withCNA, 
              EXPname = "ALL_CLs", 
@@ -295,7 +355,7 @@ plotCNA_diff(dual_FC_withCNA = output$dual_FC_withCNA,
              exclude_ess = FALSE, 
              saveToFig = TRUE, 
              saveFormat = "png", 
-             outdir = sprintf("%s/ALL_CLs/",  fold))
+             outdir = sprintf("%s/ALL_CLs/",  fold_output))
 
 ###### plot CN COLO #####
 plotCNA(dual_FC_withCNA = output$dual_FC_withCNA[grepl("COLO", output$dual_FC_withCNA$lib),], 
@@ -303,14 +363,14 @@ plotCNA(dual_FC_withCNA = output$dual_FC_withCNA[grepl("COLO", output$dual_FC_wi
         saveToFig = TRUE, 
         essential_genes = essential_genes,
         saveFormat = "png", 
-        outdir = sprintf("%s/ALL_CLs/COLO_",  fold))
+        outdir = sprintf("%s/ALL_CLs/COLO_",  fold_output))
 
 plotCNA_diff(dual_FC_withCNA = output$dual_FC_withCNA[grepl("COLO", output$dual_FC_withCNA$lib),], 
         EXPname = "ALL_CLs", 
         saveToFig = TRUE, 
         essential_genes = essential_genes,
         saveFormat = "png", 
-        outdir = sprintf("%s/ALL_CLs/COLO_",  fold))
+        outdir = sprintf("%s/ALL_CLs/COLO_",  fold_output))
 
 plotCNA(dual_FC_withCNA = output$dual_FC_withCNA[grepl("COLO", output$dual_FC_withCNA$lib),], 
         EXPname = "ALL_CLs", 
@@ -318,7 +378,7 @@ plotCNA(dual_FC_withCNA = output$dual_FC_withCNA[grepl("COLO", output$dual_FC_wi
         essential_genes = essential_genes,
         exclude_ess = FALSE, 
         saveFormat = "png", 
-        outdir = sprintf("%s/ALL_CLs/COLO_",  fold))
+        outdir = sprintf("%s/ALL_CLs/COLO_",  fold_output))
 
 plotCNA_diff(dual_FC_withCNA = output$dual_FC_withCNA[grepl("COLO", output$dual_FC_withCNA$lib),], 
              EXPname = "ALL_CLs", 
@@ -326,19 +386,19 @@ plotCNA_diff(dual_FC_withCNA = output$dual_FC_withCNA[grepl("COLO", output$dual_
              essential_genes = essential_genes,
              exclude_ess = FALSE, 
              saveFormat = "png", 
-             outdir = sprintf("%s/ALL_CLs/COLO_",  fold))
+             outdir = sprintf("%s/ALL_CLs/COLO_",  fold_output))
 
 plotCNA(dual_FC_withCNA = output$dual_FC_withCNA[grepl("COLO", output$dual_FC_withCNA$lib),], 
         EXPname = "ALL_CLs", 
         saveToFig = TRUE, 
         saveFormat = "png", 
-        outdir = sprintf("%s/ALL_CLs/COLO_",  fold))
+        outdir = sprintf("%s/ALL_CLs/COLO_",  fold_output))
 
 plotCNA_diff(dual_FC_withCNA = output$dual_FC_withCNA[grepl("COLO", output$dual_FC_withCNA$lib),], 
              EXPname = "ALL_CLs", 
              saveToFig = TRUE, 
              saveFormat = "png", 
-             outdir = sprintf("%s/ALL_CLs/COLO_",  fold))
+             outdir = sprintf("%s/ALL_CLs/COLO_",  fold_output))
 
 ###### plot CN BRCA #####
 plotCNA(dual_FC_withCNA = output$dual_FC_withCNA[grepl("BRCA", output$dual_FC_withCNA$lib),], 
@@ -346,26 +406,26 @@ plotCNA(dual_FC_withCNA = output$dual_FC_withCNA[grepl("BRCA", output$dual_FC_wi
         essential_genes = essential_genes,
         saveToFig = TRUE, 
         saveFormat = "png", 
-        outdir = sprintf("%s/ALL_CLs/BRCA_",  fold))
+        outdir = sprintf("%s/ALL_CLs/BRCA_",  fold_output))
 
 plotCNA_diff(dual_FC_withCNA = output$dual_FC_withCNA[grepl("BRCA", output$dual_FC_withCNA$lib),], 
              EXPname = "ALL_CLs", 
              essential_genes = essential_genes,
              saveToFig = TRUE, 
              saveFormat = "png", 
-             outdir = sprintf("%s/ALL_CLs/BRCA_",  fold))
+             outdir = sprintf("%s/ALL_CLs/BRCA_",  fold_output))
 
 plotCNA(dual_FC_withCNA = output$dual_FC_withCNA[grepl("BRCA", output$dual_FC_withCNA$lib),], 
         EXPname = "ALL_CLs", 
         saveToFig = TRUE, 
         saveFormat = "png", 
-        outdir = sprintf("%s/ALL_CLs/BRCA_",  fold))
+        outdir = sprintf("%s/ALL_CLs/BRCA_",  fold_output))
 
 plotCNA_diff(dual_FC_withCNA = output$dual_FC_withCNA[grepl("BRCA", output$dual_FC_withCNA$lib),], 
              EXPname = "ALL_CLs", 
              saveToFig = TRUE, 
              saveFormat = "png", 
-             outdir = sprintf("%s/ALL_CLs/BRCA_",  fold))
+             outdir = sprintf("%s/ALL_CLs/BRCA_",  fold_output))
 
 
 plotCNA(dual_FC_withCNA = output$dual_FC_withCNA[grepl("BRCA", output$dual_FC_withCNA$lib),], 
@@ -374,7 +434,7 @@ plotCNA(dual_FC_withCNA = output$dual_FC_withCNA[grepl("BRCA", output$dual_FC_wi
         exclude_ess = FALSE, 
         saveToFig = TRUE, 
         saveFormat = "png", 
-        outdir = sprintf("%s/ALL_CLs/BRCA_",  fold))
+        outdir = sprintf("%s/ALL_CLs/BRCA_",  fold_output))
 
 plotCNA_diff(dual_FC_withCNA = output$dual_FC_withCNA[grepl("BRCA", output$dual_FC_withCNA$lib),], 
              EXPname = "ALL_CLs", 
@@ -382,7 +442,7 @@ plotCNA_diff(dual_FC_withCNA = output$dual_FC_withCNA[grepl("BRCA", output$dual_
              exclude_ess = FALSE, 
              saveToFig = TRUE, 
              saveFormat = "png", 
-             outdir = sprintf("%s/ALL_CLs/BRCA_",  fold))
+             outdir = sprintf("%s/ALL_CLs/BRCA_",  fold_output))
 
 ##### selection of gene pairs ####
 sel_gene <- output$selection_gene_letANDsyn %>%
@@ -445,7 +505,7 @@ pl <- ggarrange(plotlist = list(pl_colo, pl_brca), ncol = 1,
                 heights = c(1, 0.7))
 print(pl)
 ggsave(pl,  
-       filename = sprintf("%s/ALL_CLs/ALL_CLs_count_selected_gene_pairs.png", fold), width = 5, height = 8)
+       filename = sprintf("%s/ALL_CLs/ALL_CLs_count_selected_gene_pairs.png", fold_output), width = 5, height = 8)
 
 # compare to amp count
 count_amp_COLO <- output$dual_FC_withCNA %>%
@@ -490,7 +550,7 @@ pl <- ggplot(count_tot, aes(x = perc_amp, y = n_novel)) +
   xlab("% of pairs amplified (Gene1 or Gene2)") 
 pl
 ggsave(pl,  
-       filename = sprintf("%s/ALL_CLs/ALL_CLs_nUniqueGenePairs_VS_PercAmp.png", fold), width = 5, height = 4)
+       filename = sprintf("%s/ALL_CLs/ALL_CLs_nUniqueGenePairs_VS_PercAmp.png", fold_output), width = 5, height = 4)
 
 pl <- ggplot(count_tot, aes(x = mean_correction_dual, y = n_novel)) +
   geom_point(aes(color = tissue), size = 2) + 
@@ -503,8 +563,8 @@ pl <- ggplot(count_tot, aes(x = mean_correction_dual, y = n_novel)) +
   xlab("Mean correction") 
 pl
 ggsave(pl,  
-       filename = sprintf("%s/ALL_CLs/ALL_CLs_nUniqueGenePairs_VS_meanCorrection.png", fold), width = 5, height = 4)
+       filename = sprintf("%s/ALL_CLs/ALL_CLs_nUniqueGenePairs_VS_meanCorrection.png", fold_output), width = 5, height = 4)
 
 #### correction across libraries ####
-dual_FC_COLO <- output$dual_FC %>%
-  filter(lib == "COLO")
+# dual_FC_COLO <- output$dual_FC %>%
+#   filter(lib == "COLO")
