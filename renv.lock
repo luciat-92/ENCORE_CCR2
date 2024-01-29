@@ -3,6 +3,26 @@
     "Version": "4.1.0",
     "Repositories": [
       {
+        "Name": "BioCsoft",
+        "URL": "https://rstudio-pm.fht.org/fht-bioconductor/packages/3.14/bioc"
+      },
+      {
+        "Name": "BioCann",
+        "URL": "https://rstudio-pm.fht.org/fht-bioconductor/packages/3.14/data/annotation"
+      },
+      {
+        "Name": "BioCexp",
+        "URL": "https://rstudio-pm.fht.org/fht-bioconductor/packages/3.14/data/experiment"
+      },
+      {
+        "Name": "BioCworkflows",
+        "URL": "https://rstudio-pm.fht.org/fht-bioconductor/packages/3.14/workflows"
+      },
+      {
+        "Name": "BioCbooks",
+        "URL": "https://rstudio-pm.fht.org/fht-bioconductor/packages/3.14/books"
+      },
+      {
         "Name": "CRAN",
         "URL": "https://rstudio-pm.fht.org/fht-cran/2022-04-27"
       }
@@ -102,13 +122,8 @@
     "Biobase": {
       "Package": "Biobase",
       "Version": "2.54.0",
-      "Source": "CRAN",
-      "RemoteType": "standard",
-      "RemotePkgRef": "Biobase",
-      "RemoteRef": "Biobase",
-      "RemoteRepos": "https://bioconductor.org/packages/3.14/bioc",
-      "RemotePkgPlatform": "source",
-      "RemoteSha": "2.54.0",
+      "Source": "Repository",
+      "Repository": "RSPM",
       "git_url": "https://git.bioconductor.org/packages/Biobase",
       "git_branch": "RELEASE_3_14",
       "git_last_commit": "8215d76",
@@ -291,7 +306,7 @@
     },
     "CRISPRcleanRatSquared": {
       "Package": "CRISPRcleanRatSquared",
-      "Version": "0.5.1",
+      "Version": "0.6.0",
       "Source": "GitHub",
       "Remotes": "git::https://github.com/francescojm/CRISPRcleanR",
       "RemoteType": "github",
@@ -300,8 +315,8 @@
       "RemoteUsername": "luciat-92",
       "RemotePkgRef": "luciat-92/CRISPRcleanRatSquared",
       "RemoteRef": "HEAD",
-      "RemoteSha": "8439c6d212eabfd8392c03b6b302f08afad7baf1",
-      "Hash": "fc3c153a542e9f0662d8fe0491fa6612",
+      "RemoteSha": "5afe5ab841a6af44eb5715531eb1bd501bfd840c",
+      "Hash": "4a6970b8489166bde2f0cada563eb85f",
       "Requirements": [
         "CRISPRcleanR",
         "CVXR",
