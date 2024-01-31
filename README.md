@@ -17,13 +17,13 @@ Batch correction of ENCORE data via ComBat.
 **ATM: outputs both not corrected and corrected format. Repeated per c91, c92 and cavg versions**.
 The output is a table with one guide pair in each library per row and CLs + guide pair info per columns. The data is in the logFC format, replicates for each CL are collapsed taking the mean.
 ```
-sbatch scripts/0_batch_correction_run.R
+sbatch scripts/0_batch_correction_run.sh
 ```
 
 #### STEP 1:
 Data preprocessing of genome-wide single screens (Project score and new screens) and Encore data.
 ```
-sbatch scripts/1_preproc_run.R 
+sbatch scripts/1_preproc_run.sh 
 ```
 
 #### STEP 2:
