@@ -881,7 +881,7 @@ plot_model_perf <- function(model_perf,
             axis.text = element_text(size = 11), 
             axis.title = element_text(size = 12), 
             axis.text.x = element_text(angle = 45, hjust = 1)) +
-      ylab("Pears. Corr.\nSingle VS Pseudo single") + 
+      ylab("Pears. Corr.\nPred. pseudo single VS pseudo single") + 
       xlab("") +
       ggtitle("Double Gene Pairs") +
       coord_flip()
@@ -896,7 +896,7 @@ plot_model_perf <- function(model_perf,
             axis.text = element_text(size = 11), 
             axis.title = element_text(size = 12), 
             axis.text.x = element_text(angle = 45, hjust = 1)) +
-      ylab("Pears. Corr.\nSingle VS Pseudo single") + 
+      ylab("Pears. Corr.\nPred. pseudo single VS pseudo single") + 
       xlab("") +
       ggtitle("NON-TARGET Pairs") +
       coord_flip()
